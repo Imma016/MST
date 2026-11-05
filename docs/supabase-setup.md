@@ -14,7 +14,12 @@ This creates private-by-default profiles, prevents users from reading or changin
 
 ## Set the app connection values
 
-In the project's **Connect** dialog, copy the Project URL and publishable key into a local `.env.local` file using `.env.example` as a guide. Do not put a Supabase secret or service-role key in the app or share one in chat. Publishable keys are intended for browser apps when RLS is enabled.
+In the project's **Connect** dialog, copy the Project URL and publishable key into a local `.env.local` file using `.env.example` as a guide. For the published GitHub Pages app, add them as repository variables in **Settings → Secrets and variables → Actions → Variables**:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+The publishable key is designed to be included in a browser app; row-level security (RLS) protects user data. Never use a Supabase secret or service-role key in the frontend.
 
 The Profile screen supports email/password sign-up, sign-in, and password reset. For Google sign-in, add the OAuth client ID and secret in Supabase **Authentication → Providers → Google**, then set `VITE_ENABLE_GOOGLE_AUTH=true` in `.env.local`. Do not put the Google client secret in `.env.local`; Supabase stores it in the provider settings. Apple sign-in remains out of this step while we keep the setup free.
 

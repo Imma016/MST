@@ -76,10 +76,10 @@ export function AccountPanel() {
       <section className="account-panel" aria-labelledby="account-title">
         <p className="eyebrow">YOUR ACCOUNT</p>
         <h2 id="account-title">Accounts are being connected</h2>
-        <p className="account-intro">The sign-in screen is ready. Add your free Supabase project details locally to turn on accounts; your keys stay out of the code and out of GitHub.</p>
+        <p className="account-intro">Accounts need your Supabase project details in the app build. For the published MST app, add the project URL and publishable key as GitHub Actions variables.</p>
         <div className="setup-note">
           <strong>Next setup step</strong>
-          <span>Follow <code>docs/supabase-setup.md</code>, then put the project URL and publishable key in <code>.env.local</code>.</span>
+          <span>Follow <code>docs/supabase-setup.md</code>. Use <code>.env.local</code> for local testing and GitHub Actions variables for the published app. Never use a service-role key here.</span>
         </div>
       </section>
     );
