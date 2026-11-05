@@ -1,0 +1,14 @@
+{
+  "id": "./",
+  "name": "MST — My Series & Stories Tracker",
+  "short_name": "MST",
+  "description": "Keep track of the series, movies, and books you love.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#0d1020",
+  "icons": [
+    { "src": "./mst-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

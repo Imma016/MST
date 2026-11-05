@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0d1020">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MST">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./mst-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./mst-icon.svg">
+  <title>MST — My Series & Stories Tracker</title>
+  <!-- Prevent flash of wrong theme before CSS loads -->
+  <script>
+    (function(){
+      var t = localStorage.getItem('tracker_theme') ||
+        (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
+  <style>
+    /* === RESET === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    button { font: inherit; }
+    input, textarea { font: inherit; }
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+
+    /* === CSS VARIABLES === */
+    :root {
+      --bg-page:      #0f1117;
+      --bg-card:      #1a1d27;
+      --bg-modal:     #1f2235;
+      --bg-input:     #252840;
+      --bg-header:    #0d1020;
+
+      --accent:       #7c6ef5;
+      --accent-hover: #9b8ff7;
+      --accent-dim:   #2d2870;
+      --accent-track: #2a2550;
+
+      --color-series: #60a5fa;
+      --color-movie:  #f97316;
+      --color-book:   #34d399;
+      --color-fav:    #fbbf24;
+
+      --text-primary: #e8eaf0;
+      --text-muted:   #6b7280;
+      --text-label:   #9ca3af;
+
+      --border:       #2d3149;
+      --border-hover: #4a4f7a;
+      --radius:       14px;
+      --radius-sm:    8px;
+      --shadow:       0 4px 24px rgba(0,0,0,0.45);
+      --shadow-card:  0 2px 12px rgba(0,0,0,0.3);
+    }
+
+    html[data-theme="light"] {
+      --bg-page:      #f0f2f8;
+      --bg-card:      #ffffff;
+      --bg-modal:     #ffffff;
+      --bg-input:     #e8eaf3;
+      --bg-header:    #ffffff;
+      --accent-dim:   #ddd9fe;
+      --accent-track: #ede9ff;
+      --border:       #d1d5e8;
+      --border-hover: #a5b0d8;
+      --text-primary: #1a1d2e;
+      --text-muted:   #6b7280;
+      --text-label:   #4b5563;
+      --shadow:       0 4px 24px rgba(0,0,0,0.1);
+      --shadow-card:  0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* === BASE === */
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    /* === HEADER === */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-header);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+      padding: 0.9rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .header-logo {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .header-logo span { color: var(--accent); }
+    .search-wrap {
+      flex: 1;
+      min-width: 160px;
+      position: relative;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    #search {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 0.5rem 1rem 0.5rem 2.4rem;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    #search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,110,245,0.2); }
+    #search::placeholder { color: var(--text-muted); }
+    .add-buttons {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .btn-add {
+      border: none;
+      cursor: pointer;
+      border-radius: 99px;
+      padding: 0.45rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #fff;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-add:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    .btn-add:active { transform: translateY(0); }
+    .btn-add-series { background: var(--color-series); }
+    .btn-add-movie  { background: var(--color-movie); }
+    .btn-add-book   { background: var(--color-book); }
+
+    /* === MAIN LAYOUT === */
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* === SECTIONS === */
+    section {
+      margin-bottom: 2.5rem;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .section-header h2 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .section-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-series   { background: var(--color-series); }
+    .dot-movie    { background: var(--color-movie); }
+    .dot-book     { background: var(--color-book); }
+    .dot-fav      { background: var(--color-fav); }
+    .section-count {
+      font-size: 0.75rem;
+      background: var(--bg-input);
+      color: var(--text-muted);
+      border-radius: 99px;
+      padding: 0.1rem 0.5rem;
+      font-weight: 600;
+    }
+    .section-divider {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* === CARD GRID === */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .card-grid:empty::after {
+      content: "Nothing here yet.";
+      display: block;
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 0.9rem;
+      padding: 0.5rem 0;
+    }
+
+    /* === CARDS === */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.15rem;
+      box-shadow: var(--shadow-card);
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+      position: relative;
+    }
+    .card:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow);
+      transform: translateY(-2px);
+    }
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      justify-content: space-between;
+    }
+    .card-title-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+    .card-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      padding: 0.1rem 0.4rem;
+      margin-bottom: 0.25rem;
+    }
+    .badge-series { background: rgba(96,165,250,0.15); color: var(--color-series); }
+    .badge-movie  { background: rgba(249,115,22,0.15); color: var(--color-movie); }
+    .badge-book   { background: rgba(52,211,153,0.15); color: var(--color-book); }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      word-break: break-word;
+      line-height: 1.3;
+    }
+    .card-actions {
+      display: flex;
+      gap: 0.4rem;
+      flex-shrink: 0;
+      align-items: flex-start;
+    }
+
+    /* === BUTTONS === */
+    .btn-icon {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      padding: 0.3rem 0.45rem;
+      font-size: 0.85rem;
+      line-height: 1;
+      transition: background 0.15s, color 0.15s;
+      color: var(--text-muted);
+    }
+    .btn-delete:hover { color: #ef4444; background: rgba(239,68,68,0.12); }
+    .btn-fav { font-size: 1.1rem; }
+    .btn-fav:hover { color: var(--color-fav); background: rgba(251,191,36,0.12); }
+    .btn-fav[aria-pressed="true"] { color: var(--color-fav); }
+
+    /* === SERIES SPECIFIC === */
+    .progress-wrap {
+      margin: 0.85rem 0 0.3rem;
+    }
+    .progress-track {
+      background: var(--accent-track);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 0.35rem;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+      border-radius: 99px;
+      transition: width 0.4s cubic-bezier(.4,0,.2,1);
+      min-width: 0;
+    }
+    .progress-label {
+      font-size: 0.78rem;
+      color: var(--text-label);
+      font-weight: 500;
+    }
+    .progress-label strong { color: var(--accent-hover); }
+
+    /* === EPISODE LIST === */
+    .episode-details {
+      margin-top: 0.85rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.75rem;
+    }
+    .episode-summary {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-weight: 500;
+    }
+    .episode-summary:hover { color: var(--text-label); }
+    .ep-chevron { transition: transform 0.2s; display: inline-block; }
+    details[open] .ep-chevron { transform: rotate(90deg); }
+    .episode-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      gap: 0.35rem;
+      margin-top: 0.65rem;
+    }
+    .ep-label {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.78rem;
+      color: var(--text-label);
+      cursor: pointer;
+      padding: 0.2rem 0.3rem;
+      border-radius: 4px;
+      transition: background 0.1s;
+      white-space: nowrap;
+    }
+    .ep-label:hover { background: var(--bg-input); }
+    .ep-label input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+    .ep-label.watched { color: var(--accent-hover); }
+
+    /* === MOVIE SPECIFIC === */
+    .movie-check-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.55rem;
+      cursor: pointer;
+      flex: 1;
+      min-width: 0;
+    }
+    .movie-check-label input[type="checkbox"] {
+      accent-color: var(--color-movie);
+      cursor: pointer;
+      margin-top: 0.2rem;
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* === BOOK SPECIFIC === */
+    .book-check-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.55rem;
+      cursor: pointer;
+      flex: 1;
+      min-width: 0;
+    }
+    .book-check-label input[type="checkbox"] {
+      accent-color: var(--color-book);
+      cursor: pointer;
+      margin-top: 0.2rem;
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* === MODAL === */
+    #modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      backdrop-filter: blur(4px);
+      padding: 1rem;
+    }
+    #modal-overlay.hidden { display: none; }
+    #modal {
+      background: var(--bg-modal);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: var(--shadow);
+      position: relative;
+      animation: modal-in 0.18s ease;
+    }
+    @keyframes modal-in {
+      from { opacity: 0; transform: scale(0.94) translateY(8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    #modal-close {
+      position: absolute;
+      top: 0.9rem;
+      right: 0.9rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 1.3rem;
+      color: var(--text-muted);
+      line-height: 1;
+      padding: 0.2rem 0.4rem;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    #modal-close:hover { color: var(--text-primary); background: var(--bg-input); }
+    #modal h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      color: var(--text-primary);
+    }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-label);
+      margin-bottom: 0.35rem;
+    }
+    .form-group input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.8rem;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-group input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,110,245,0.2);
+    }
+    .form-group input::placeholder { color: var(--text-muted); }
+    .btn-submit {
+      width: 100%;
+      border: none;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      padding: 0.7rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      background: var(--accent);
+      transition: background 0.15s, transform 0.1s;
+      margin-top: 0.5rem;
+    }
+    .btn-submit:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-submit:active { transform: translateY(0); }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 640px) {
+      header { padding: 0.65rem 0.85rem; gap: 0.55rem; }
+      .header-logo { font-size: 1.05rem; }
+      .search-wrap { order: 3; flex-basis: 100%; }
+      .add-buttons { order: 4; flex: 1; }
+      .btn-add { flex: 1; min-height: 42px; }
+      .theme-toggle { margin-left: auto; }
+      main { padding: 1rem 0.85rem calc(2rem + env(safe-area-inset-bottom)); }
+      .card-grid { grid-template-columns: 1fr; }
+      section { margin-bottom: 1.75rem; }
+      .section-header { margin-bottom: 0.75rem; }
+      button, input { touch-action: manipulation; }
+    }
+
+    /* === THEME TOGGLE === */
+    .theme-toggle { display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0; }
+    .theme-toggle-icon {
+      font-size: 0.95rem; color: var(--text-muted); user-select: none;
+      width: 1.1rem; text-align: center; line-height: 1;
+    }
+    .toggle-pill {
+      width: 40px; height: 22px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: 99px;
+      cursor: pointer; position: relative;
+      transition: background 0.25s, border-color 0.25s;
+      flex-shrink: 0; padding: 0;
+    }
+    html[data-theme="light"] .toggle-pill { background: var(--accent); border-color: var(--accent); }
+    .toggle-pill-thumb {
+      width: 16px; height: 16px;
+      background: var(--text-muted);
+      border-radius: 50%; position: absolute;
+      top: 1px; left: 1px;
+      transition: transform 0.25s cubic-bezier(.4,0,.2,1), background 0.25s;
+      pointer-events: none;
+    }
+    html[data-theme="light"] .toggle-pill-thumb { transform: translateX(18px); background: #fff; }
+
+    /* === SEASON GROUPING === */
+    .season-header {
+      grid-column: 1 / -1;
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--text-muted);
+      padding: 0.45rem 0 0.2rem;
+      border-bottom: 1px solid var(--border);
+      margin-top: 0.3rem;
+    }
+    .season-header:first-child { margin-top: 0; padding-top: 0; }
+
+    /* === SERIES API SEARCH === */
+    .api-search-wrap { position: relative; }
+    .api-spinner {
+      position: absolute; right: 0.75rem; top: 50%;
+      transform: translateY(-50%);
+      width: 15px; height: 15px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+    .api-results {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-top: 0.35rem;
+      max-height: 210px;
+      overflow-y: auto;
+    }
+    .api-result-item {
+      padding: 0.55rem 0.75rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .api-result-item:last-child { border-bottom: none; }
+    .api-result-item:hover { background: var(--bg-card); }
+    .api-result-title { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); }
+    .api-result-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .api-selected-box {
+      display: flex; align-items: center; gap: 0.6rem;
+      background: rgba(124,110,245,0.08);
+      border: 1px solid var(--accent-dim);
+      border-radius: var(--radius-sm);
+      padding: 0.55rem 0.75rem;
+      margin-top: 0.35rem;
+    }
+    .api-selected-check { color: var(--accent); font-size: 1.05rem; flex-shrink: 0; }
+    .api-selected-info { flex: 1; min-width: 0; }
+    .api-selected-name { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); }
+    .api-selected-detail { font-size: 0.75rem; color: var(--text-muted); }
+    .api-clear-btn {
+      background: transparent; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 1rem;
+      padding: 0.1rem 0.3rem; border-radius: 4px; line-height: 1;
+      flex-shrink: 0;
+    }
+    .api-clear-btn:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+    .api-error {
+      font-size: 0.8rem; color: #f87171;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius-sm);
+      padding: 0.45rem 0.75rem; margin-top: 0.35rem;
+    }
+    .api-hint {
+      font-size: 0.78rem; color: var(--text-muted);
+      margin-top: 0.4rem; font-style: italic;
+    }
+    .hidden { display: none !important; }
+
+    /* === SMOOTH THEME TRANSITION === */
+    .theme-transitioning,
+    .theme-transitioning * {
+      transition: background-color 0.25s ease, color 0.15s ease,
+                  border-color 0.25s ease !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-logo">M<span>ST</span></div>
+    <div class="search-wrap">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input id="search" type="search" placeholder="Search titles…" autocomplete="off">
+    </div>
+    <div class="add-buttons">
+      <button class="btn-add btn-add-series" id="add-series-btn">+ Series</button>
+      <button class="btn-add btn-add-movie"  id="add-movie-btn">+ Movie</button>
+      <button class="btn-add btn-add-book"   id="add-book-btn">+ Book</button>
+    </div>
+    <div class="theme-toggle">
+      <span class="theme-toggle-icon" id="theme-icon">&#9728;</span>
+      <button class="toggle-pill" id="theme-toggle-btn" aria-label="Toggle dark/light mode" role="switch">
+        <span class="toggle-pill-thumb"></span>
+      </button>
+    </div>
+    <button class="btn-add" id="install-btn" style="background:var(--accent);display:none" type="button">Install</button>
+  </header>
+
+  <!-- MODAL -->
+  <div id="modal-overlay" class="hidden" role="dialog" aria-modal="true">
+    <div id="modal">
+      <button id="modal-close" aria-label="Close">&times;</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main>
+    <section id="sec-ongoing">
+      <div class="section-header">
+        <div class="section-dot dot-series"></div>
+        <h2>Ongoing Series</h2>
+        <span class="section-count" id="count-ongoing">0</span>
+        <div class="section-divider"></div>
+      </div>
+      <div class="card-grid" id="grid-ongoing"></div>
+    </section>
+
+    <section id="sec-completed">
+      <div class="section-header">
+        <div class="section-dot dot-series"></div>
+        <h2>Completed Series</h2>
+        <span class="section-count" id="count-completed">0</span>
+        <div class="section-divider"></div>
+      </div>
+      <div class="card-grid" id="grid-completed"></div>
+    </section>
+
+    <section id="sec-movies">
+      <div class="section-header">
+        <div class="section-dot dot-movie"></div>
+        <h2>Movies To Watch</h2>
+        <span class="section-count" id="count-movies">0</span>
+        <div class="section-divider"></div>
+      </div>
+      <div class="card-grid" id="grid-movies"></div>
+    </section>
+
+    <section id="sec-watched">
+      <div class="section-header">
+        <div class="section-dot dot-movie"></div>
+        <h2>Watched Movies</h2>
+        <span class="section-count" id="count-watched">0</span>
+        <div class="section-divider"></div>
+      </div>
+      <div class="card-grid" id="grid-watched"></div>
+    </section>
+
+    <section id="sec-books">
+      <div class="section-header">
+        <div class="section-dot dot-book"></div>
+        <h2>Books To Read</h2>
+        <span class="section-count" id="count-books">0</span>
+        <div class="section-divider"></div>
+      </div>
+      <div class="card-grid" id="grid-books"></div>
+    </section>
+
+    <section id="sec-read">
+      <div class="section-header">
+        <div class="section-dot dot-book"></div>
+        <h2>Read Books</h2>
+        <span class="section-count" id="count-read">0</span>
+        <div class="section-divider"></div>
+      </div>
+      <div class="card-grid" id="grid-read"></div>
+    </section>
+
+    <section id="sec-fav">
+      <div class="section-header">
+        <div class="section-dot dot-fav"></div>
+        <h2>Favorite Books</h2>
+        <span class="section-count" id="count-fav">0</span>
+        <div class="section-divider"></div>
+      </div>
+      <div class="card-grid" id="grid-fav"></div>
+    </section>
+  </main>
+
+  <script>
+    /* === CONSTANTS === */
+    const STORAGE_KEY = 'tracker_v1';
+
+    const GRIDS = {
+      ongoing:   document.getElementById('grid-ongoing'),
+      completed: document.getElementById('grid-completed'),
+      movies:    document.getElementById('grid-movies'),
+      watched:   document.getElementById('grid-watched'),
+      books:     document.getElementById('grid-books'),
+      read:      document.getElementById('grid-read'),
+      fav:       document.getElementById('grid-fav'),
+    };
+
+    const COUNTS = {
+      ongoing:   document.getElementById('count-ongoing'),
+      completed: document.getElementById('count-completed'),
+      movies:    document.getElementById('count-movies'),
+      watched:   document.getElementById('count-watched'),
+      books:     document.getElementById('count-books'),
+      read:      document.getElementById('count-read'),
+      fav:       document.getElementById('count-fav'),
+    };
+
+    /* === STATE === */
+    let state = { initialized: false, series: [], movies: [], books: [] };
+
+    /* === UID HELPER === */
+    function uid() {
+      if (crypto && crypto.randomUUID) return crypto.randomUUID();
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    }
+
+    /* === SAMPLE DATA === */
+    function buildInitialState() {
+      const now = Date.now();
+      return {
+        initialized: true,
+        series: [
+          {
+            id: uid(), type: 'series', title: 'The Wire',
+            totalEpisodes: 60,
+            watched: Array(60).fill(false),
+            createdAt: now
+          },
+          {
+            id: uid(), type: 'series', title: 'Severance',
+            totalEpisodes: 19,
+            watched: Array(19).fill(true),
+            createdAt: now
+          },
+          {
+            id: uid(), type: 'series', title: 'Shogun (2024)',
+            totalEpisodes: 10,
+            watched: Array(10).fill(false).map((_, i) => i < 6),
+            createdAt: now
+          },
+        ],
+        movies: [
+          { id: uid(), type: 'movie', title: 'Dune Part Two',   watched: false, createdAt: now },
+          { id: uid(), type: 'movie', title: 'Oppenheimer',     watched: true,  createdAt: now },
+          { id: uid(), type: 'movie', title: 'The Brutalist',   watched: false, createdAt: now },
+        ],
+        books: [
+          { id: uid(), type: 'book', title: 'Project Hail Mary',          read: true,  favorite: true,  createdAt: now },
+          { id: uid(), type: 'book', title: 'Dune',                        read: false, favorite: false, createdAt: now },
+          { id: uid(), type: 'book', title: 'The Pragmatic Programmer',    read: true,  favorite: false, createdAt: now },
+        ]
+      };
+    }
+
+    /* === STORAGE === */
+    function save() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.initialized) {
+            state = parsed;
+            return;
+          }
+        }
+      } catch(e) {}
+      state = buildInitialState();
+      save();
+    }
+
+    /* === CARD BUILDERS === */
+
+    function buildSeriesCard(s) {
+      const watchedCount = s.watched.filter(Boolean).length;
+      const pct = s.totalEpisodes > 0 ? Math.round((watchedCount / s.totalEpisodes) * 100) : 0;
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.id = s.id;
+      card.dataset.type = 'series';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'card-header';
+
+      const titleWrap = document.createElement('div');
+      titleWrap.className = 'card-title-wrap';
+
+      const badge = document.createElement('div');
+      badge.className = 'card-badge badge-series';
+      badge.textContent = 'Series';
+
+      const title = document.createElement('div');
+      title.className = 'card-title';
+      title.textContent = s.title;
+
+      titleWrap.appendChild(badge);
+      titleWrap.appendChild(title);
+
+      const actions = document.createElement('div');
+      actions.className = 'card-actions';
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn-icon btn-delete';
+      deleteBtn.title = 'Delete';
+      deleteBtn.setAttribute('aria-label', 'Delete series');
+      deleteBtn.textContent = '✕';
+
+      actions.appendChild(deleteBtn);
+      header.appendChild(titleWrap);
+      header.appendChild(actions);
+      card.appendChild(header);
+
+      // Progress
+      const progressWrap = document.createElement('div');
+      progressWrap.className = 'progress-wrap';
+
+      const track = document.createElement('div');
+      track.className = 'progress-track';
+      const bar = document.createElement('div');
+      bar.className = 'progress-bar';
+      bar.style.width = pct + '%';
+      track.appendChild(bar);
+
+      const label = document.createElement('div');
+      label.className = 'progress-label';
+      const strong = document.createElement('strong');
+      strong.textContent = watchedCount;
+      label.appendChild(strong);
+      label.appendChild(document.createTextNode(' / ' + s.totalEpisodes + ' episodes watched'));
+
+      progressWrap.appendChild(track);
+      progressWrap.appendChild(label);
+      card.appendChild(progressWrap);
+
+      // Episode list
+      const details = document.createElement('details');
+      details.className = 'episode-details';
+
+      const summary = document.createElement('summary');
+      summary.className = 'episode-summary';
+      const chevron = document.createElement('span');
+      chevron.className = 'ep-chevron';
+      chevron.textContent = '▶';
+      summary.appendChild(chevron);
+      summary.appendChild(document.createTextNode(' Episodes (' + s.totalEpisodes + ')'));
+      details.appendChild(summary);
+
+      const epGrid = document.createElement('div');
+      epGrid.className = 'episode-grid';
+
+      if (s.episodes && s.episodes.length) {
+        // Season-grouped from TVMaze
+        const seasonMap = new Map();
+        s.episodes.forEach((ep, idx) => {
+          if (!seasonMap.has(ep.season)) seasonMap.set(ep.season, []);
+          seasonMap.get(ep.season).push({ ...ep, idx });
+        });
+        seasonMap.forEach((eps, seasonNum) => {
+          const sh = document.createElement('div');
+          sh.className = 'season-header';
+          sh.textContent = 'Season ' + seasonNum;
+          epGrid.appendChild(sh);
+          eps.forEach(ep => {
+            const lbl = document.createElement('label');
+            lbl.className = 'ep-label' + (s.watched[ep.idx] ? ' watched' : '');
+            lbl.title = ep.name || '';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.className = 'ep-cb';
+            cb.dataset.ep = ep.idx; cb.checked = !!s.watched[ep.idx];
+            lbl.appendChild(cb);
+            lbl.appendChild(document.createTextNode('S' + ep.season + 'E' + ep.number));
+            epGrid.appendChild(lbl);
+          });
+        });
+      } else {
+        // Flat list (manually entered)
+        for (let i = 0; i < s.totalEpisodes; i++) {
+          const lbl = document.createElement('label');
+          lbl.className = 'ep-label' + (s.watched[i] ? ' watched' : '');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox'; cb.className = 'ep-cb';
+          cb.dataset.ep = i; cb.checked = !!s.watched[i];
+          lbl.appendChild(cb);
+          lbl.appendChild(document.createTextNode('Ep ' + (i + 1)));
+          epGrid.appendChild(lbl);
+        }
+      }
+
+      details.appendChild(epGrid);
+      card.appendChild(details);
+
+      return card;
+    }
+
+    function buildMovieCard(m) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.id = m.id;
+      card.dataset.type = 'movie';
+
+      const header = document.createElement('div');
+      header.className = 'card-header';
+
+      const lbl = document.createElement('label');
+      lbl.className = 'movie-check-label';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'watched-cb';
+      cb.checked = !!m.watched;
+
+      const titleWrap = document.createElement('div');
+      titleWrap.className = 'card-title-wrap';
+
+      const badge = document.createElement('div');
+      badge.className = 'card-badge badge-movie';
+      badge.textContent = 'Movie';
+
+      const title = document.createElement('div');
+      title.className = 'card-title';
+      title.textContent = m.title;
+
+      titleWrap.appendChild(badge);
+      titleWrap.appendChild(title);
+
+      lbl.appendChild(cb);
+      lbl.appendChild(titleWrap);
+
+      const actions = document.createElement('div');
+      actions.className = 'card-actions';
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn-icon btn-delete';
+      deleteBtn.title = 'Delete';
+      deleteBtn.setAttribute('aria-label', 'Delete movie');
+      deleteBtn.textContent = '✕';
+
+      actions.appendChild(deleteBtn);
+      header.appendChild(lbl);
+      header.appendChild(actions);
+      card.appendChild(header);
+
+      return card;
+    }
+
+    function buildBookCard(b) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.id = b.id;
+      card.dataset.type = 'book';
+
+      const header = document.createElement('div');
+      header.className = 'card-header';
+
+      const lbl = document.createElement('label');
+      lbl.className = 'book-check-label';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'read-cb';
+      cb.checked = !!b.read;
+
+      const titleWrap = document.createElement('div');
+      titleWrap.className = 'card-title-wrap';
+
+      const badge = document.createElement('div');
+      badge.className = 'card-badge badge-book';
+      badge.textContent = 'Book';
+
+      const title = document.createElement('div');
+      title.className = 'card-title';
+      title.textContent = b.title;
+
+      titleWrap.appendChild(badge);
+      titleWrap.appendChild(title);
+
+      lbl.appendChild(cb);
+      lbl.appendChild(titleWrap);
+
+      const actions = document.createElement('div');
+      actions.className = 'card-actions';
+
+      const favBtn = document.createElement('button');
+      favBtn.className = 'btn-icon btn-fav';
+      favBtn.setAttribute('aria-label', 'Toggle favorite');
+      favBtn.setAttribute('aria-pressed', b.favorite ? 'true' : 'false');
+      favBtn.textContent = '★';
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn-icon btn-delete';
+      deleteBtn.title = 'Delete';
+      deleteBtn.setAttribute('aria-label', 'Delete book');
+      deleteBtn.textContent = '✕';
+
+      actions.appendChild(favBtn);
+      actions.appendChild(deleteBtn);
+      header.appendChild(lbl);
+      header.appendChild(actions);
+      card.appendChild(header);
+
+      return card;
+    }
+
+    /* === RENDER === */
+    function render() {
+      const q = (document.getElementById('search').value || '').trim().toLowerCase();
+
+      // Clear all grids
+      Object.values(GRIDS).forEach(g => { g.innerHTML = ''; });
+
+      // --- Series ---
+      const filteredSeries = state.series.filter(s => !q || s.title.toLowerCase().includes(q));
+      filteredSeries.forEach(s => {
+        const allWatched = s.watched.length > 0 && s.watched.every(Boolean);
+        const grid = allWatched ? GRIDS.completed : GRIDS.ongoing;
+        grid.appendChild(buildSeriesCard(s));
+      });
+
+      // --- Movies ---
+      const filteredMovies = state.movies.filter(m => !q || m.title.toLowerCase().includes(q));
+      filteredMovies.forEach(m => {
+        const grid = m.watched ? GRIDS.watched : GRIDS.movies;
+        grid.appendChild(buildMovieCard(m));
+      });
+
+      // --- Books ---
+      const filteredBooks = state.books.filter(b => !q || b.title.toLowerCase().includes(q));
+      filteredBooks.forEach(b => {
+        // Main grid
+        const mainGrid = b.read ? GRIDS.read : GRIDS.books;
+        mainGrid.appendChild(buildBookCard(b));
+        // Favorites grid (separate node)
+        if (b.favorite) {
+          GRIDS.fav.appendChild(buildBookCard(b));
+        }
+      });
+
+      // Update counts
+      COUNTS.ongoing.textContent   = GRIDS.ongoing.children.length;
+      COUNTS.completed.textContent = GRIDS.completed.children.length;
+      COUNTS.movies.textContent    = GRIDS.movies.children.length;
+      COUNTS.watched.textContent   = GRIDS.watched.children.length;
+      COUNTS.books.textContent     = GRIDS.books.children.length;
+      COUNTS.read.textContent      = GRIDS.read.children.length;
+      COUNTS.fav.textContent       = GRIDS.fav.children.length;
+    }
+
+    /* === MUTATIONS === */
+    function mutate(collection, id, fn) {
+      const item = state[collection].find(x => x.id === id);
+      if (item) { fn(item); save(); render(); }
+    }
+
+    function deleteItem(type, id) {
+      const key = type === 'series' ? 'series' : type === 'movie' ? 'movies' : 'books';
+      state[key] = state[key].filter(x => x.id !== id);
+      save();
+      render();
+    }
+
+    function addSeries(title, totalEpisodes, episodes) {
+      const obj = {
+        id: uid(), type: 'series', title,
+        totalEpisodes,
+        watched: Array(totalEpisodes).fill(false),
+        createdAt: Date.now()
+      };
+      if (episodes && episodes.length) obj.episodes = episodes;
+      state.series.push(obj);
+      save(); render();
+    }
+
+    function addMovie(title) {
+      state.movies.push({ id: uid(), type: 'movie', title, watched: false, createdAt: Date.now() });
+      save(); render();
+    }
+
+    function addBook(title) {
+      state.books.push({ id: uid(), type: 'book', title, read: false, favorite: false, createdAt: Date.now() });
+      save(); render();
+    }
+
+    /* === MODAL === */
+    const overlay = document.getElementById('modal-overlay');
+    const modalBody = document.getElementById('modal-body');
+
+    function openModal(headingText, fieldsHTML, onSubmit) {
+      // Build heading safely
+      const h3 = document.createElement('h3');
+      h3.textContent = headingText;
+      modalBody.innerHTML = '';
+      modalBody.appendChild(h3);
+
+      // Insert form HTML (no user data here — safe)
+      const formEl = document.createElement('form');
+      formEl.id = 'modal-form';
+      formEl.innerHTML = fieldsHTML;
+      modalBody.appendChild(formEl);
+
+      formEl.addEventListener('submit', e => {
+        e.preventDefault();
+        onSubmit(formEl);
+        closeModal();
+      });
+
+      overlay.classList.remove('hidden');
+      const firstInput = formEl.querySelector('input');
+      if (firstInput) setTimeout(() => firstInput.focus(), 50);
+    }
+
+    function closeModal() {
+      overlay.classList.add('hidden');
+      modalBody.innerHTML = '';
+    }
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    /* === SERIES MODAL WITH TVMAZE API SEARCH === */
+    let _searchTimer = null;
+    let _selectedShow = null;
+    let _fetchedEpisodes = null;
+
+    function openSeriesModal() {
+      _selectedShow = null;
+      _fetchedEpisodes = null;
+      clearTimeout(_searchTimer);
+
+      modalBody.innerHTML = '';
+
+      // Heading
+      const h3 = document.createElement('h3');
+      h3.textContent = 'Add Series';
+      modalBody.appendChild(h3);
+
+      // Title field with spinner
+      const fg = document.createElement('div');
+      fg.className = 'form-group';
+      const lbl = document.createElement('label');
+      lbl.htmlFor = 'f-stitle';
+      lbl.textContent = 'Series Title';
+      fg.appendChild(lbl);
+      const wrap = document.createElement('div');
+      wrap.className = 'api-search-wrap';
+      const titleInput = document.createElement('input');
+      titleInput.type = 'text'; titleInput.id = 'f-stitle';
+      titleInput.placeholder = 'e.g. Breaking Bad'; titleInput.maxLength = 200;
+      titleInput.autocomplete = 'off';
+      const spinner = document.createElement('div');
+      spinner.className = 'api-spinner hidden';
+      wrap.appendChild(titleInput); wrap.appendChild(spinner);
+      fg.appendChild(wrap);
+      modalBody.appendChild(fg);
+
+      // Hint
+      const hint = document.createElement('div');
+      hint.className = 'api-hint';
+      hint.textContent = 'Type to search — episode data fetched automatically from TVMaze.';
+      modalBody.appendChild(hint);
+
+      // Results, selected box, error
+      const resultsList  = document.createElement('div');
+      resultsList.className = 'api-results hidden';
+      modalBody.appendChild(resultsList);
+
+      const selectedBox = document.createElement('div');
+      selectedBox.className = 'api-selected-box hidden';
+      modalBody.appendChild(selectedBox);
+
+      const errorBox = document.createElement('div');
+      errorBox.className = 'api-error hidden';
+      modalBody.appendChild(errorBox);
+
+      // Manual fallback
+      const manualFg = document.createElement('div');
+      manualFg.className = 'form-group hidden';
+      manualFg.id = 'manual-eps-group';
+      const manualLbl = document.createElement('label');
+      manualLbl.htmlFor = 'f-eps-manual'; manualLbl.textContent = 'Total Episodes (manual)';
+      const manualInput = document.createElement('input');
+      manualInput.type = 'number'; manualInput.id = 'f-eps-manual';
+      manualInput.min = 1; manualInput.max = 5000;
+      manualInput.placeholder = 'e.g. 62';
+      manualFg.appendChild(manualLbl); manualFg.appendChild(manualInput);
+      modalBody.appendChild(manualFg);
+
+      // Submit button
+      const submitBtn = document.createElement('button');
+      submitBtn.className = 'btn-submit';
+      submitBtn.type = 'button';
+      submitBtn.textContent = 'Add Series';
+      submitBtn.disabled = true;
+      submitBtn.style.marginTop = '0.75rem';
+      modalBody.appendChild(submitBtn);
+
+      overlay.classList.remove('hidden');
+      setTimeout(() => titleInput.focus(), 50);
+
+      // Helpers
+      const setError = msg => { errorBox.textContent = msg; errorBox.classList.remove('hidden'); };
+      const clearError = () => errorBox.classList.add('hidden');
+
+      function showManualEntry() {
+        manualFg.classList.remove('hidden');
+        manualInput.addEventListener('input', () => {
+          const v = parseInt(manualInput.value, 10);
+          submitBtn.disabled = !(titleInput.value.trim() && v > 0);
+        });
+      }
+
+      function renderSelectedBox(show, episodes) {
+        selectedBox.innerHTML = '';
+        const check = document.createElement('span');
+        check.className = 'api-selected-check'; check.textContent = '✓';
+        const info = document.createElement('div');
+        info.className = 'api-selected-info';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'api-selected-name'; nameEl.textContent = show.show.name;
+        const detailEl = document.createElement('div');
+        detailEl.className = 'api-selected-detail';
+        if (episodes) {
+          const seasonCount = new Set(episodes.map(e => e.season)).size;
+          detailEl.textContent = `${episodes.length} episodes · ${seasonCount} season${seasonCount !== 1 ? 's' : ''}`;
+        } else {
+          detailEl.textContent = 'Fetching episodes…';
+        }
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'api-clear-btn'; clearBtn.type = 'button';
+        clearBtn.textContent = '✕'; clearBtn.title = 'Clear selection';
+        clearBtn.addEventListener('click', () => {
+          _selectedShow = null; _fetchedEpisodes = null;
+          selectedBox.classList.add('hidden');
+          resultsList.classList.add('hidden');
+          manualFg.classList.add('hidden');
+          submitBtn.disabled = true;
+          titleInput.value = '';
+          clearError();
+          titleInput.focus();
+        });
+        info.appendChild(nameEl); info.appendChild(detailEl);
+        selectedBox.appendChild(check); selectedBox.appendChild(info); selectedBox.appendChild(clearBtn);
+        selectedBox.classList.remove('hidden');
+        resultsList.classList.add('hidden');
+      }
+
+      async function fetchEpisodes(showId, show) {
+        try {
+          const res = await fetch('https://api.tvmaze.com/shows/' + showId + '/episodes');
+          if (!res.ok) throw new Error();
+          const eps = await res.json();
+          _fetchedEpisodes = eps.map(e => ({ name: e.name, season: e.season, number: e.number }));
+          renderSelectedBox(show, _fetchedEpisodes);
+          submitBtn.disabled = false;
+        } catch(_) {
+          _fetchedEpisodes = null;
+          renderSelectedBox(show, null);
+          setError('Could not fetch episode list. Enter episode count manually.');
+          showManualEntry();
+          submitBtn.disabled = !titleInput.value.trim();
+        }
+      }
+
+      function selectShow(show) {
+        _selectedShow = show;
+        clearError();
+        renderSelectedBox(show, null);
+        fetchEpisodes(show.show.id, show);
+      }
+
+      function renderResults(results) {
+        resultsList.innerHTML = '';
+        if (!results.length) {
+          resultsList.classList.add('hidden');
+          setError('No results found on TVMaze. Enter episode count manually.');
+          showManualEntry();
+          submitBtn.disabled = !titleInput.value.trim();
+          return;
+        }
+        results.slice(0, 6).forEach(r => {
+          const item = document.createElement('div');
+          item.className = 'api-result-item';
+          const titleDiv = document.createElement('div');
+          titleDiv.className = 'api-result-title'; titleDiv.textContent = r.show.name;
+          const metaDiv = document.createElement('div');
+          metaDiv.className = 'api-result-meta';
+          const year = r.show.premiered ? r.show.premiered.slice(0, 4) : '';
+          const network = (r.show.network && r.show.network.name) || (r.show.webChannel && r.show.webChannel.name) || '';
+          const genre = (r.show.genres || []).slice(0, 2).join(', ');
+          metaDiv.textContent = [year, network, genre].filter(Boolean).join(' · ');
+          item.appendChild(titleDiv);
+          if (metaDiv.textContent) item.appendChild(metaDiv);
+          item.addEventListener('click', () => selectShow(r));
+          resultsList.appendChild(item);
+        });
+        resultsList.classList.remove('hidden');
+      }
+
+      async function searchShows(query) {
+        spinner.classList.remove('hidden');
+        clearError();
+        selectedBox.classList.add('hidden');
+        manualFg.classList.add('hidden');
+        submitBtn.disabled = true;
+        try {
+          const res = await fetch('https://api.tvmaze.com/search/shows?q=' + encodeURIComponent(query));
+          if (!res.ok) throw new Error();
+          spinner.classList.add('hidden');
+          renderResults(await res.json());
+        } catch(_) {
+          spinner.classList.add('hidden');
+          setError('Could not reach TVMaze API. Enter episode count manually.');
+          showManualEntry();
+          submitBtn.disabled = !titleInput.value.trim();
+        }
+      }
+
+      titleInput.addEventListener('input', () => {
+        clearTimeout(_searchTimer);
+        _selectedShow = null; _fetchedEpisodes = null;
+        selectedBox.classList.add('hidden');
+        submitBtn.disabled = true;
+        const q = titleInput.value.trim();
+        if (!q) {
+          resultsList.classList.add('hidden');
+          spinner.classList.add('hidden');
+          clearError();
+          return;
+        }
+        _searchTimer = setTimeout(() => searchShows(q), 500);
+      });
+
+      submitBtn.addEventListener('click', () => {
+        const title = titleInput.value.trim();
+        if (!title) return;
+        if (_fetchedEpisodes && _fetchedEpisodes.length) {
+          addSeries(title, _fetchedEpisodes.length, _fetchedEpisodes);
+          closeModal();
+        } else {
+          const eps = parseInt(manualInput.value, 10);
+          if (eps > 0) { addSeries(title, eps); closeModal(); }
+        }
+      });
+    }
+
+    /* === ADD BUTTONS === */
+    document.getElementById('add-series-btn').addEventListener('click', openSeriesModal);
+
+    document.getElementById('add-movie-btn').addEventListener('click', () => {
+      openModal(
+        'Add Movie',
+        `<div class="form-group">
+           <label for="f-mtitle">Movie Title</label>
+           <input type="text" id="f-mtitle" placeholder="e.g. Dune Part Two" required maxlength="200">
+         </div>
+         <button type="submit" class="btn-submit">Add Movie</button>`,
+        form => {
+          const title = form.querySelector('#f-mtitle').value.trim();
+          if (title) addMovie(title);
+        }
+      );
+    });
+
+    document.getElementById('add-book-btn').addEventListener('click', () => {
+      openModal(
+        'Add Book',
+        `<div class="form-group">
+           <label for="f-btitle">Book Title</label>
+           <input type="text" id="f-btitle" placeholder="e.g. Project Hail Mary" required maxlength="200">
+         </div>
+         <button type="submit" class="btn-submit">Add Book</button>`,
+        form => {
+          const title = form.querySelector('#f-btitle').value.trim();
+          if (title) addBook(title);
+        }
+      );
+    });
+
+    /* === EVENT DELEGATION === */
+    const mainEl = document.querySelector('main');
+
+    mainEl.addEventListener('change', e => {
+      const card = e.target.closest('[data-id]');
+      if (!card) return;
+      const id   = card.dataset.id;
+      const type = card.dataset.type;
+
+      if (type === 'series' && e.target.classList.contains('ep-cb')) {
+        const epIndex = parseInt(e.target.dataset.ep, 10);
+        mutate('series', id, s => {
+          s.watched[epIndex] = e.target.checked;
+        });
+      }
+
+      if (type === 'movie' && e.target.classList.contains('watched-cb')) {
+        mutate('movies', id, m => { m.watched = e.target.checked; });
+      }
+
+      if (type === 'book' && e.target.classList.contains('read-cb')) {
+        mutate('books', id, b => { b.read = e.target.checked; });
+      }
+    });
+
+    mainEl.addEventListener('click', e => {
+      const card = e.target.closest('[data-id]');
+      if (!card) return;
+      const id   = card.dataset.id;
+      const type = card.dataset.type;
+
+      if (e.target.classList.contains('btn-delete')) {
+        deleteItem(type, id);
+        return;
+      }
+
+      if (type === 'book' && e.target.classList.contains('btn-fav')) {
+        mutate('books', id, b => { b.favorite = !b.favorite; });
+      }
+    });
+
+    /* === SEARCH === */
+    let searchTimer;
+    document.getElementById('search').addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(render, 150);
+    });
+
+    /* === THEME MANAGEMENT === */
+    const THEME_KEY = 'tracker_theme';
+    let _themeTransTimer;
+
+    function applyTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      const icon = document.getElementById('theme-icon');
+      // ☾ moon for dark, ☀ sun for light
+      if (icon) icon.textContent = theme === 'light' ? '\u263E' : '\u2600';
+      localStorage.setItem(THEME_KEY, theme);
+    }
+
+    document.getElementById('theme-toggle-btn').addEventListener('click', () => {
+      const current = document.documentElement.dataset.theme || 'dark';
+      document.body.classList.add('theme-transitioning');
+      clearTimeout(_themeTransTimer);
+      _themeTransTimer = setTimeout(() => document.body.classList.remove('theme-transitioning'), 300);
+      applyTheme(current === 'light' ? 'dark' : 'light');
+    });
+
+    /* === INIT === */
+    applyTheme(
+      localStorage.getItem(THEME_KEY) ||
+      (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    );
+    load();
+    render();
+
+    /* === INSTALLABLE APP === */
+    let installPrompt = null;
+    const installButton = document.getElementById('install-btn');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (!isStandalone) installButton.style.display = 'inline-flex';
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      installPrompt = event;
+      installButton.textContent = 'Install MST';
+      installButton.style.display = 'inline-flex';
+    });
+    installButton.addEventListener('click', async () => {
+      if (installPrompt) {
+        installPrompt.prompt();
+        await installPrompt.userChoice;
+        installPrompt = null;
+        return;
+      }
+      alert('To add MST to your phone: open this page in your browser menu, then choose “Add to Home Screen” (iPhone: Share → Add to Home Screen).');
+    });
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+    }
+  </script>
+</body>
+</html>
