@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { HomePage } from '../features/home/HomePage';
 import { AccountPanel } from '../features/auth/AccountPanel';
+import { WatchLibrary } from '../features/watch/WatchLibrary';
+import { Bookshelf } from '../features/books/Bookshelf';
 
 type TabId = 'home' | 'watch' | 'books' | 'discover' | 'profile';
 type ThemeId = 'midnight' | 'gilded' | 'sky' | 'terracotta';
@@ -25,6 +27,7 @@ function Icon({ name }: { name: string }) {
   const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   if (name === 'home') return <svg viewBox="0 0 24 24" aria-hidden="true" {...common}><path d="m3.5 10 8.5-7 8.5 7"/><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"/></svg>;
   if (name === 'play') return <svg viewBox="0 0 24 24" aria-hidden="true" {...common}><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg>;
+  if (name === 'anime') return <svg viewBox="0 0 24 24" aria-hidden="true" {...common}><path d="M4 5.5 12 3l8 2.5v9.2c0 3.4-3.7 5.4-8 6.8-4.3-1.4-8-3.4-8-6.8z"/><path d="M8 11h.01M16 11h.01M9 15c1.8 1.5 4.2 1.5 6 0"/><path d="m5.5 7.5 2-2M18.5 7.5l-2-2"/></svg>;
   if (name === 'book') return <svg viewBox="0 0 24 24" aria-hidden="true" {...common}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M4 5.5v14A2.5 2.5 0 0 1 6.5 17H20M8 7h8"/></svg>;
   if (name === 'sparkle') return <svg viewBox="0 0 24 24" aria-hidden="true" {...common}><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>;
   return <svg viewBox="0 0 24 24" aria-hidden="true" {...common}><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>;
@@ -115,10 +118,18 @@ export function App() {
       </header>
 
       <main className="main-content" key={activeTab}>
-        {activeTab === 'home' ? <HomePage counts={legacyCounts} /> : (
-          activeTab === 'profile' ? (
+        {activeTab === 'home' ? <HomePage counts={legacyCounts} /> : activeTab === 'watch' ? <WatchLibrary /> : (
+          activeTab === 'books' ? <Bookshelf /> : activeTab === 'profile' ? (
             <>
               <AccountPanel />
+              <section className="credits-panel" aria-labelledby="credits-heading">
+                <p className="eyebrow">ABOUT &amp; CREDITS</p>
+                <h2 id="credits-heading">Metadata that helps MST find your next favorite</h2>
+                <a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer" aria-label="The Movie Database, TMDB">
+                  <img src="https://www.themoviedb.org/assets/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB" />
+                </a>
+                <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+              </section>
               {!isInstalled && (
                 <div className="install-help">
                   <h2>Add MST to your Home Screen</h2>
@@ -131,8 +142,6 @@ export function App() {
             <p className="eyebrow">MST · YOUR PERSONAL LIBRARY</p>
             <h1 id="page-title">{activeLabel}</h1>
             <p className="page-description">
-              {activeTab === 'watch' && 'Keep your shows and movies together, and pick up right where you left off.'}
-              {activeTab === 'books' && 'Build your shelves, follow your reading progress, and remember the books you love.'}
               {activeTab === 'discover' && 'Find something good to watch or read next.'}
             </p>
             <div className="coming-card">

@@ -4,7 +4,11 @@ MST is a personal tracker for the shows, movies, and books people care about. Th
 
 ## Current build step
 
-This branch introduces the React app shell and mobile navigation. The previous tracker is preserved at `public/classic.html` and can still be opened at `/MST/classic.html` after deployment. Its data remains in browser storage under `tracker_v1`; keep that storage intact until the account migration step is complete.
+This branch includes the mobile React app shell, Supabase accounts, separate TV/Movies/Anime search with posters, and TV episode progress with upcoming air dates when TMDB has them. The Books tab searches Google Books and Open Library and saves personal reading shelves and page progress. The previous tracker is preserved at `public/classic.html` and can still be opened at `/MST/classic.html` after deployment. Its data remains in browser storage under `tracker_v1`; keep that storage intact until the account migration step is complete.
+
+To connect TV/movie/Anime search, follow [docs/watch-search-setup.md](docs/watch-search-setup.md). The setup needs a free TMDB API token saved as a Supabase Edge Function secret; the token is never included in the browser app. Books search setup is in [docs/books-setup.md](docs/books-setup.md).
+
+Database migrations are applied by GitHub Actions from `main`; see [docs/supabase-migrations-automation.md](docs/supabase-migrations-automation.md) for the one-time secrets and migration-history setup.
 
 ## Run locally
 
@@ -15,7 +19,7 @@ npm install
 npm run dev
 ```
 
-If you already installed the foundation dependencies before the account step, run `npm install @supabase/supabase-js` once to add Supabase Auth.
+If you already installed the foundation dependencies before the account step, run `npm install @supabase/supabase-js` once to add Supabase Auth. No extra npm packages are needed for watch search.
 
 For a production preview:
 
@@ -39,4 +43,4 @@ Public profiles, lists, and social content will be opt-in. The owner overview wi
 
 ## Current app
 
-Open `public/classic.html` for the working legacy tracker. It stores data in the current browser. The React shell reads the existing `tracker_v1` record to show a small library summary, but account sign-in and cloud migration have not been added yet.
+The React app uses Supabase for authentication and private library entries. Open `public/classic.html` for the working legacy tracker; it stores its data in the browser. The migration from that local data into the signed-in account has not been added yet.
