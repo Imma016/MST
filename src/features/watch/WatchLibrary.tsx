@@ -3,8 +3,10 @@ import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../../lib/supabase';
 import { EpisodeDetails } from './EpisodeDetails';
 import { MovieDetails } from './MovieDetails';
+import { HistoryImport } from './HistoryImport';
 
-type Category = 'tv' | 'movie' | 'anime';
+type Category = 'all' | 'tv' | 'movie' | 'anime';
+type SavedCategory = Exclude<Category, 'all'>;
 type Status = 'watching' | 'completed' | 'plan_to_watch' | 'on_hold' | 'dropped';
 type Result = {
   id: number;
@@ -15,6 +17,7 @@ type Result = {
   poster_path?: string | null;
   backdrop_path?: string | null;
   original_language?: string;
+  origin_country?: string[];
   genre_ids?: number[];
   first_air_date?: string;
   release_date?: string;
@@ -23,8 +26,9 @@ type Result = {
 type Saved = {
   id: string;
   catalog_item_id: string;
-  category: Category;
+  category: SavedCategory;
   status: Status;
+  is_favorite: boolean;
   catalog_item: {
     provider_id: number;
     media_type: 'tv' | 'movie';
@@ -37,6 +41,7 @@ type Saved = {
 };
 
 const categories: Array<{ id: Category; label: string; icon: string }> = [
+  { id: 'all', label: 'All titles', icon: '✧' },
   { id: 'tv', label: 'TV Shows', icon: '▣' },
   { id: 'movie', label: 'Movies', icon: '▶' },
   { id: 'anime', label: 'Anime', icon: '✦' },
@@ -67,6 +72,8 @@ export function WatchLibrary() {
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
   const [selectedShow, setSelectedShow] = useState<Saved | null>(null);
   const [selectedMovie, setSelectedMovie] = useState<Saved | null>(null);
+  const [showHistoryImport, setShowHistoryImport] = useState(false);
+  const [libraryRefresh, setLibraryRefresh] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,19 +119,19 @@ export function WatchLibrary() {
     }
     setSaved([]);
     setLoadingLibrary(true);
-    void supabase.from('user_library')
-      .select('id, catalog_item_id, category, status, catalog_item:catalog_items(provider_id, media_type, title, overview, poster_path, release_date, original_language)')
+    let request = supabase.from('user_library')
+      .select('id, catalog_item_id, category, status, is_favorite, catalog_item:catalog_items(provider_id, media_type, title, overview, poster_path, release_date, original_language)')
       .eq('user_id', session.user.id)
-      .eq('category', category)
-      .order('added_at', { ascending: false })
-      .then(({ data, error: queryError }) => {
+      .order('added_at', { ascending: false });
+    if (category !== 'all') request = request.eq('category', category);
+    void request.then(({ data, error: queryError }) => {
         if (cancelled) return;
         setLoadingLibrary(false);
         if (queryError) setError('Your library could not be loaded. Please refresh and try again.');
         else setSaved((data ?? []) as unknown as Saved[]);
       });
     return () => { cancelled = true; };
-  }, [session, category]);
+  }, [session, category, libraryRefresh]);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,7 +181,7 @@ export function WatchLibrary() {
     const { data: libraryEntry, error: addError } = await supabase.from('user_library').insert({
       user_id: session.user.id,
       catalog_item_id: catalog.id,
-      category,
+      category: category === 'all' ? (item.genre_ids?.includes(16) && (item.original_language === 'ja' || item.origin_country?.includes('JP')) ? 'anime' : item.media_type) : category,
       status: 'plan_to_watch',
     }).select('id').single();
     setSavingId(null);
@@ -187,8 +194,9 @@ export function WatchLibrary() {
       setSaved((current) => [{
         id: libraryEntry.id,
         catalog_item_id: catalog.id,
-        category,
+        category: category === 'all' ? (item.genre_ids?.includes(16) && (item.original_language === 'ja' || item.origin_country?.includes('JP')) ? 'anime' : item.media_type) : category,
         status: 'plan_to_watch',
+        is_favorite: false,
         catalog_item: {
           provider_id: item.id,
           media_type: item.media_type,
@@ -200,6 +208,14 @@ export function WatchLibrary() {
         },
       }, ...current]);
     }
+  }
+
+  async function toggleFavorite(entry: Saved) {
+    if (!supabase) return;
+    const nextFavorite = !entry.is_favorite;
+    const { error: favoriteError } = await supabase.from('user_library').update({ is_favorite: nextFavorite }).eq('id', entry.id);
+    if (favoriteError) setError('Could not update this favorite. Please try again.');
+    else setSaved((current) => current.map((item) => item.id === entry.id ? { ...item, is_favorite: nextFavorite } : item));
   }
 
   async function changeStatus(entryId: string, status: Status) {
@@ -241,8 +257,10 @@ export function WatchLibrary() {
           <button type="button" role="tab" aria-selected={view === 'search'} className={view === 'search' ? 'is-active' : ''} onClick={() => setView('search')}>Search</button>
           <button type="button" role="tab" aria-selected={view === 'library'} className={view === 'library' ? 'is-active' : ''} onClick={() => setView('library')}>My library <span className="count-pill">{saved.length}</span></button>
         </div>
-        {view === 'search' && <label className="media-search"><span aria-hidden="true">⌕</span><span className="sr-only">Search {category === 'anime' ? 'anime' : category === 'tv' ? 'TV shows' : 'movies'}</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${category === 'anime' ? 'anime' : category === 'tv' ? 'TV shows' : 'movies'}…`} disabled={authLoading || !session} /></label>}
+        {view === 'search' && <label className="media-search"><span aria-hidden="true">⌕</span><span className="sr-only">Search {category === 'all' ? 'all titles' : category === 'anime' ? 'anime' : category === 'tv' ? 'TV shows' : 'movies'}</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${category === 'all' ? 'all titles' : category === 'anime' ? 'anime' : category === 'tv' ? 'TV shows' : 'movies'}…`} disabled={authLoading || !session} /></label>}
       </div>
+
+      {session && view === 'library' && <div className="library-import-action"><p>Bring over your history from a CSV export.</p><button type="button" className="episodes-link" onClick={() => setShowHistoryImport(true)}>Import history</button></div>}
 
       {!authLoading && !session && <div className="library-empty"><span className="empty-symbol">◎</span><h2>Sign in to start your library</h2><p>Your saved shows, movies, and anime are private to your account.</p><button className="watch-primary" type="button" onClick={() => document.querySelector<HTMLButtonElement>('.tab-button:last-child')?.click()}>Go to Profile to sign in</button></div>}
       {error && <p className="watch-alert" role="alert">{error}</p>}
@@ -254,7 +272,7 @@ export function WatchLibrary() {
         {!searching && query.trim().length >= 2 && results.length === 0 && !error && <div className="library-empty compact-empty"><h2>No matches yet</h2><p>Try another title or spelling.</p></div>}
         {!searching && results.length > 0 && <div className="poster-grid">{results.map((item) => <article className="poster-card" key={`${item.media_type}-${item.id}`}>
           <Poster path={item.poster_path} title={titleOf(item)} />
-          <div className="poster-card-body"><span className="poster-type">{category === 'anime' ? 'ANIME' : item.media_type === 'tv' ? 'TV SERIES' : 'MOVIE'}</span><h2 title={titleOf(item)}>{titleOf(item)}</h2><p>{(item.release_date || item.first_air_date || '').slice(0, 4) || 'Release date unknown'}{item.vote_average ? ` · ★ ${item.vote_average.toFixed(1)}` : ''}</p>
+          <div className="poster-card-body"><span className="poster-type">{category === 'anime' || (category === 'all' && item.genre_ids?.includes(16) && (item.original_language === 'ja' || item.origin_country?.includes('JP'))) ? 'ANIME' : item.media_type === 'tv' ? 'TV SERIES' : 'MOVIE'}</span><h2 title={titleOf(item)}>{titleOf(item)}</h2><p>{(item.release_date || item.first_air_date || '').slice(0, 4) || 'Release date unknown'}{item.vote_average ? ` · ★ ${item.vote_average.toFixed(1)}` : ''}</p>
             <button type="button" className={`watch-primary add-title${savedIds.has(`${item.media_type}:${item.id}`) ? ' is-added' : ''}`} disabled={savedIds.has(`${item.media_type}:${item.id}`) || savingId === item.id} onClick={() => void addTitle(item)}>{savingId === item.id ? 'Adding…' : savedIds.has(`${item.media_type}:${item.id}`) ? '✓ Added' : '+ Add to library'}</button>
           </div>
         </article>)}</div>}
@@ -270,15 +288,16 @@ export function WatchLibrary() {
           <button type="button" role="tab" aria-selected={statusFilter === 'all'} className={statusFilter === 'all' ? 'is-active' : ''} onClick={() => setStatusFilter('all')}>All <span>{saved.length}</span></button>
           {statuses.map((status) => <button type="button" role="tab" aria-selected={statusFilter === status.id} className={statusFilter === status.id ? 'is-active' : ''} key={status.id} onClick={() => setStatusFilter(status.id)}>{status.label} <span>{saved.filter((entry) => entry.status === status.id).length}</span></button>)}
         </div>}
-        {loadingLibrary ? <div className="poster-grid" aria-label="Loading library">{Array.from({ length: 3 }, (_, index) => <div className="poster-skeleton" key={index}><span /><i /><b /></div>)}</div> : saved.length === 0 ? <div className="library-empty"><span className="empty-symbol">✧</span><h2>Your {category === 'anime' ? 'anime' : category === 'tv' ? 'TV' : 'movie'} list is ready</h2><p>Search for a title and add it here. Posters and your progress stay saved to your account.</p><button className="watch-primary" type="button" onClick={() => setView('search')}>Find something to watch</button></div> : filteredSaved.length === 0 ? <div className="library-empty compact-empty"><h2>No titles in this status yet</h2><p>Choose another filter or add something new.</p><button className="account-text-button" type="button" onClick={() => setStatusFilter('all')}>Show all titles</button></div> : <div className="saved-list">{filteredSaved.map((entry) => <article className="saved-card" key={entry.id}>
+        {loadingLibrary ? <div className="poster-grid" aria-label="Loading library">{Array.from({ length: 3 }, (_, index) => <div className="poster-skeleton" key={index}><span /><i /><b /></div>)}</div> : saved.length === 0 ? <div className="library-empty"><span className="empty-symbol">✧</span><h2>Your {category === 'all' ? 'watch' : category === 'anime' ? 'anime' : category === 'tv' ? 'TV' : 'movie'} list is ready</h2><p>Search for a title and add it here. Posters and your progress stay saved to your account.</p><button className="watch-primary" type="button" onClick={() => setView('search')}>Find something to watch</button></div> : filteredSaved.length === 0 ? <div className="library-empty compact-empty"><h2>No titles in this status yet</h2><p>Choose another filter or add something new.</p><button className="account-text-button" type="button" onClick={() => setStatusFilter('all')}>Show all titles</button></div> : <div className="saved-list">{filteredSaved.map((entry) => <article className="saved-card" key={entry.id}>
           <Poster path={entry.catalog_item?.poster_path} title={entry.catalog_item?.title ?? 'Saved title'} />
-          <div className="saved-card-info"><div className="saved-card-kicker"><span className="poster-type">{entry.category === 'anime' ? 'ANIME' : entry.category === 'tv' ? 'TV SERIES' : 'MOVIE'}</span><span className={`saved-status saved-status-${entry.status}`}>{statuses.find((status) => status.id === entry.status)?.label}</span></div><h2>{entry.catalog_item?.title ?? 'Saved title'}</h2><p>{(entry.catalog_item?.release_date ?? '').slice(0, 4) || 'Release date unknown'}{entry.catalog_item?.original_language ? ` · ${entry.catalog_item.original_language.toUpperCase()}` : ''}</p>{entry.catalog_item?.media_type === 'tv' && <span className="saved-progress-pill">{episodeCounts[entry.catalog_item_id] ?? 0} episodes logged</span>}<p className="saved-overview">{entry.catalog_item?.overview || 'No description available.'}</p>
+          <div className="saved-card-info"><div className="saved-card-kicker"><span className="poster-type">{entry.category === 'anime' ? 'ANIME' : entry.category === 'tv' ? 'TV SERIES' : 'MOVIE'}</span><span className={`saved-status saved-status-${entry.status}`}>{statuses.find((status) => status.id === entry.status)?.label}</span><button type="button" className={`favorite-toggle${entry.is_favorite ? ' is-favorite' : ''}`} aria-label={`${entry.is_favorite ? 'Remove from' : 'Add to'} favorites: ${entry.catalog_item?.title}`} aria-pressed={entry.is_favorite} onClick={() => void toggleFavorite(entry)}>{entry.is_favorite ? '★' : '☆'}</button></div><h2>{entry.catalog_item?.title ?? 'Saved title'}</h2><p>{(entry.catalog_item?.release_date ?? '').slice(0, 4) || 'Release date unknown'}{entry.catalog_item?.original_language ? ` · ${entry.catalog_item.original_language.toUpperCase()}` : ''}</p>{entry.catalog_item?.media_type === 'tv' && <span className="saved-progress-pill">{episodeCounts[entry.catalog_item_id] ?? 0} episodes logged</span>}<p className="saved-overview">{entry.catalog_item?.overview || 'No description available.'}</p>
           <div className="saved-actions"><label><span className="sr-only">Status for {entry.catalog_item?.title}</span><select value={entry.status} onChange={(event) => void changeStatus(entry.id, event.target.value as Status)}>{statuses.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select></label>{entry.catalog_item?.media_type === 'tv' && <button type="button" className="episodes-link" onClick={() => setSelectedShow(entry)}>Episodes &amp; details</button>}{entry.catalog_item?.media_type === 'movie' && <button type="button" className="episodes-link" onClick={() => setSelectedMovie(entry)}>Details &amp; where to watch</button>}<button type="button" className="remove-title" onClick={() => void removeTitle(entry.id)}>Remove</button></div></div>
         </article>)}</div>}
       </>}
 
       {selectedShow?.catalog_item && <EpisodeDetails key={selectedShow.id} title={selectedShow.catalog_item.title} catalogItemId={selectedShow.catalog_item_id} tmdbId={selectedShow.catalog_item.provider_id} onClose={() => setSelectedShow(null)} />}
       {selectedMovie?.catalog_item && <MovieDetails key={selectedMovie.id} title={selectedMovie.catalog_item.title} overview={selectedMovie.catalog_item.overview} posterPath={selectedMovie.catalog_item.poster_path} tmdbId={selectedMovie.catalog_item.provider_id} onClose={() => setSelectedMovie(null)} />}
+      {showHistoryImport && <HistoryImport onClose={() => setShowHistoryImport(false)} onImported={() => setLibraryRefresh((current) => current + 1)} />}
     </section>
   );
 }

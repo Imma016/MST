@@ -5,7 +5,7 @@ const corsHeaders = {
 };
 
 type MediaType = 'movie' | 'tv';
-type Category = 'tv' | 'movie' | 'anime';
+type Category = 'tv' | 'movie' | 'anime' | 'all';
 
 Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -57,9 +57,9 @@ Deno.serve(async (request: Request) => {
     const query = typeof body.query === 'string' ? body.query.trim().slice(0, 100) : '';
     const category = body.category as Category;
     if (query.length < 2) return json({ results: [] });
-    if (!['tv', 'movie', 'anime'].includes(category)) return json({ error: 'Choose TV, Movies, or Anime.' }, 400);
+    if (!['tv', 'movie', 'anime', 'all'].includes(category)) return json({ error: 'Choose TV, Movies, or Anime.' }, 400);
 
-    const mediaTypes: MediaType[] = category === 'anime' ? ['tv', 'movie'] : [category];
+    const mediaTypes: MediaType[] = category === 'anime' || category === 'all' ? ['tv', 'movie'] : [category];
     const responses = await Promise.all(mediaTypes.map(async (type) => {
       const url = new URL(`https://api.themoviedb.org/3/search/${type}`);
       url.searchParams.set('query', query);
