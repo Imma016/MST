@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react';
 import { HomePage } from '../features/home/HomePage';
 
 type TabId = 'home' | 'watch' | 'books' | 'discover' | 'profile';
+type ThemeId = 'midnight' | 'gilded' | 'sky' | 'terracotta';
 type InstallPromptEvent = Event & { prompt: () => Promise<void> };
+
+const themes: Array<{ id: ThemeId; label: string }> = [
+  { id: 'midnight', label: 'Midnight' },
+  { id: 'gilded', label: 'Gilded' },
+  { id: 'sky', label: 'Sky' },
+  { id: 'terracotta', label: 'Terracotta' },
+];
 
 const tabs: Array<{ id: TabId; label: string; icon: string }> = [
   { id: 'home', label: 'Home', icon: 'home' },
@@ -36,26 +44,52 @@ function getLegacyCounts() {
   }
 }
 
+function getInitialTheme(): ThemeId {
+  const saved = localStorage.getItem('mst_theme');
+  if (themes.some((theme) => theme.id === saved)) return saved as ThemeId;
+  // Keep the old light-mode preference when moving from the first MST version.
+  return localStorage.getItem('tracker_theme') === 'light' ? 'sky' : 'midnight';
+}
+
+function isRunningAsInstalledApp() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+}
+
 export function App() {
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(isRunningAsInstalledApp);
+  const [theme, setTheme] = useState<ThemeId>(getInitialTheme);
   const [legacyCounts] = useState(getLegacyCounts);
 
   useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('mst_theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
     const handlePrompt = (event: Event) => {
+      if (isRunningAsInstalledApp()) return;
       event.preventDefault();
       setInstallPrompt(event as InstallPromptEvent);
     };
+    const handleInstalled = () => {
+      setInstallPrompt(null);
+      setIsInstalled(true);
+    };
     window.addEventListener('beforeinstallprompt', handlePrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
+    window.addEventListener('appinstalled', handleInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handlePrompt);
+      window.removeEventListener('appinstalled', handleInstalled);
+    };
   }, []);
 
   async function installApp() {
     if (installPrompt) {
       await installPrompt.prompt();
       setInstallPrompt(null);
-    } else {
-      window.alert('On iPhone, open MST in Safari, tap Share, then Add to Home Screen.');
     }
   }
 
@@ -68,8 +102,14 @@ export function App() {
           <span className="brand-mark">M</span><span className="brand-name">MST</span>
         </a>
         <div className="topbar-actions">
-          <span className="saved-state"><span className="saved-dot" /> Saved on this device</span>
-          <button className="install-button" type="button" onClick={installApp}>Install app</button>
+          <label className="theme-picker">
+            <span className="theme-picker-icon" aria-hidden="true">◐</span>
+            <span className="sr-only">Color theme</span>
+            <select value={theme} onChange={(event) => setTheme(event.target.value as ThemeId)} aria-label="Color theme">
+              {themes.map((option) => <option value={option.id} key={option.id}>{option.label}</option>)}
+            </select>
+          </label>
+          {installPrompt && !isInstalled && <button className="install-button" type="button" onClick={installApp}>Install MST</button>}
         </div>
       </header>
 
@@ -92,6 +132,12 @@ export function App() {
                 <a className="text-link" href={`${import.meta.env.BASE_URL}classic.html`}>Open the current tracker <span aria-hidden="true">↗</span></a>
               </div>
             </div>
+            {activeTab === 'profile' && !isInstalled && (
+              <div className="install-help">
+                <h2>Add MST to your Home Screen</h2>
+                <p>On iPhone, open MST in Safari, tap Share, then choose “Add to Home Screen.” On Android, open the browser menu and choose “Install app” or “Add to Home Screen.”</p>
+              </div>
+            )}
           </section>
         )}
       </main>
