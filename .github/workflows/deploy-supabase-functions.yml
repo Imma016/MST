@@ -23,4 +23,4 @@ jobs:
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v3
       - name: Deploy TMDB search and details function
-        run: supabase functions deploy tmdb-search --project-ref "$SUPABASE_PROJECT_REF"
+        run: supabase functions deploy tmdb-search --remote="$SUPABASE_PROJECT_REF" --yes
