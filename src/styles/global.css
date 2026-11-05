@@ -513,6 +513,20 @@ h1, h2 { font-family: Manrope, sans-serif; }
 .episode-info-facts strong { color: var(--text); font-size: .9rem; }
 .episode-genres { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
 .episode-genres span { padding: 7px 10px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel); color: var(--muted); font-size: .67rem; }
+.where-to-watch { margin-top: 16px; padding: 15px; border: 1px solid var(--line); border-radius: 15px; background: var(--panel); }
+.provider-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.provider-heading .eyebrow { margin: 0 0 4px; }
+.provider-heading h3 { margin: 0; font-size: .96rem; }
+.provider-heading select { max-width: 160px; min-height: 34px; padding: 0 26px 0 9px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-soft); color: var(--text); font: inherit; font-size: .69rem; }
+.provider-message { margin: 14px 0 0; color: var(--muted); font-size: .75rem; }
+.provider-groups { display: grid; gap: 13px; margin-top: 15px; }
+.provider-group h4 { margin: 0 0 7px; color: var(--muted); font-size: .68rem; font-weight: 650; }
+.provider-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.provider-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 4px 9px 4px 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-soft); color: var(--text); font-size: .69rem; }
+.provider-chip img { width: 28px; height: 28px; border-radius: 7px; object-fit: cover; }
+.provider-link { justify-self: start; margin-top: 1px; color: var(--accent); font-size: .7rem; font-weight: 650; text-decoration: none; }
+.provider-link:hover { text-decoration: underline; }
+.provider-credit { margin: 12px 0 0; color: var(--muted); font-size: .59rem; }
 .episode-close { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); color: var(--muted); cursor: pointer; font-size: 1.6rem; line-height: 1; }
 .episode-show-overview { max-width: 720px; margin: 10px 0 17px; color: var(--muted); font-size: .82rem; line-height: 1.6; }
 .episode-show-overview:empty { display: none; }

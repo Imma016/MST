@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../../lib/supabase';
 import { EpisodeDetails } from './EpisodeDetails';
+import { MovieDetails } from './MovieDetails';
 
 type Category = 'tv' | 'movie' | 'anime';
 type Status = 'watching' | 'completed' | 'plan_to_watch' | 'on_hold' | 'dropped';
@@ -65,6 +66,7 @@ export function WatchLibrary() {
   const [view, setView] = useState<'search' | 'library'>('library');
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
   const [selectedShow, setSelectedShow] = useState<Saved | null>(null);
+  const [selectedMovie, setSelectedMovie] = useState<Saved | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -271,11 +273,12 @@ export function WatchLibrary() {
         {loadingLibrary ? <div className="poster-grid" aria-label="Loading library">{Array.from({ length: 3 }, (_, index) => <div className="poster-skeleton" key={index}><span /><i /><b /></div>)}</div> : saved.length === 0 ? <div className="library-empty"><span className="empty-symbol">✧</span><h2>Your {category === 'anime' ? 'anime' : category === 'tv' ? 'TV' : 'movie'} list is ready</h2><p>Search for a title and add it here. Posters and your progress stay saved to your account.</p><button className="watch-primary" type="button" onClick={() => setView('search')}>Find something to watch</button></div> : filteredSaved.length === 0 ? <div className="library-empty compact-empty"><h2>No titles in this status yet</h2><p>Choose another filter or add something new.</p><button className="account-text-button" type="button" onClick={() => setStatusFilter('all')}>Show all titles</button></div> : <div className="saved-list">{filteredSaved.map((entry) => <article className="saved-card" key={entry.id}>
           <Poster path={entry.catalog_item?.poster_path} title={entry.catalog_item?.title ?? 'Saved title'} />
           <div className="saved-card-info"><div className="saved-card-kicker"><span className="poster-type">{entry.category === 'anime' ? 'ANIME' : entry.category === 'tv' ? 'TV SERIES' : 'MOVIE'}</span><span className={`saved-status saved-status-${entry.status}`}>{statuses.find((status) => status.id === entry.status)?.label}</span></div><h2>{entry.catalog_item?.title ?? 'Saved title'}</h2><p>{(entry.catalog_item?.release_date ?? '').slice(0, 4) || 'Release date unknown'}{entry.catalog_item?.original_language ? ` · ${entry.catalog_item.original_language.toUpperCase()}` : ''}</p>{entry.catalog_item?.media_type === 'tv' && <span className="saved-progress-pill">{episodeCounts[entry.catalog_item_id] ?? 0} episodes logged</span>}<p className="saved-overview">{entry.catalog_item?.overview || 'No description available.'}</p>
-          <div className="saved-actions"><label><span className="sr-only">Status for {entry.catalog_item?.title}</span><select value={entry.status} onChange={(event) => void changeStatus(entry.id, event.target.value as Status)}>{statuses.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select></label>{entry.catalog_item?.media_type === 'tv' && <button type="button" className="episodes-link" onClick={() => setSelectedShow(entry)}>Episodes &amp; progress</button>}<button type="button" className="remove-title" onClick={() => void removeTitle(entry.id)}>Remove</button></div></div>
+          <div className="saved-actions"><label><span className="sr-only">Status for {entry.catalog_item?.title}</span><select value={entry.status} onChange={(event) => void changeStatus(entry.id, event.target.value as Status)}>{statuses.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select></label>{entry.catalog_item?.media_type === 'tv' && <button type="button" className="episodes-link" onClick={() => setSelectedShow(entry)}>Episodes &amp; details</button>}{entry.catalog_item?.media_type === 'movie' && <button type="button" className="episodes-link" onClick={() => setSelectedMovie(entry)}>Details &amp; where to watch</button>}<button type="button" className="remove-title" onClick={() => void removeTitle(entry.id)}>Remove</button></div></div>
         </article>)}</div>}
       </>}
 
       {selectedShow?.catalog_item && <EpisodeDetails key={selectedShow.id} title={selectedShow.catalog_item.title} catalogItemId={selectedShow.catalog_item_id} tmdbId={selectedShow.catalog_item.provider_id} onClose={() => setSelectedShow(null)} />}
+      {selectedMovie?.catalog_item && <MovieDetails key={selectedMovie.id} title={selectedMovie.catalog_item.title} overview={selectedMovie.catalog_item.overview} posterPath={selectedMovie.catalog_item.poster_path} tmdbId={selectedMovie.catalog_item.provider_id} onClose={() => setSelectedMovie(null)} />}
     </section>
   );
 }

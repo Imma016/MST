@@ -16,9 +16,9 @@ In your Supabase project, open **Edge Functions → Secrets**, add a secret name
 
 ## 4. Deploy the search function
 
-In Supabase **Edge Functions**, choose **Deploy a new function → Via Editor**, name it `tmdb-search`, and replace the example code with the contents of `supabase/functions/tmdb-search/index.ts`. Deploy it with JWT verification enabled (the default). The signed-in MST client calls this function, and it forwards only validated TV, movie, or Anime searches to TMDB.
+For initial setup, in Supabase **Edge Functions**, choose **Deploy a new function → Via Editor**, name it `tmdb-search`, and deploy `supabase/functions/tmdb-search/index.ts` with JWT verification enabled (the default). The signed-in MST client calls this function; it forwards validated searches and details requests to TMDB without exposing the token in the app.
 
-Supabase's dashboard editor is a quick setup route, but it does not keep source in Git. The canonical copy is the file in this repository. When we later set up automated deployment, the repository can deploy it for you. [Supabase's dashboard guide](https://supabase.com/docs/guides/functions/quickstart-dashboard) and [secrets guide](https://supabase.com/docs/guides/functions/secrets) show these screens.
+The repository now deploys later changes to this function automatically through `.github/workflows/deploy-supabase-functions.yml`. It uses the existing `SUPABASE_ACCESS_TOKEN` GitHub Actions secret. [Supabase's dashboard guide](https://supabase.com/docs/guides/functions/quickstart-dashboard) and [secrets guide](https://supabase.com/docs/guides/functions/secrets) show the initial setup screens.
 
 ## 5. Refresh MST and try a search
 
@@ -32,4 +32,4 @@ TMDB requires its approved logo and this notice: “This product uses the TMDB A
 
 In Supabase **SQL Editor**, run `supabase/migrations/202611050003_episode_progress.sql` as a new query. Then update the existing `tmdb-search` Edge Function from the Dashboard editor with the current `supabase/functions/tmdb-search/index.ts` file, and deploy the update. Episode progress belongs to the signed-in user; each row stores the episode, season/episode number, and watched date. TMDB provides season episodes and air dates through its [TV season details endpoint](https://developer.themoviedb.org/reference/tv-season-details).
 
-Open **My library** and choose **Episodes & progress** on a TV show or anime series. Pick a season, mark an aired episode watched, and adjust its watch date. Future-dated episodes show their release date and cannot be marked watched early. If TMDB has no air date, MST labels it as to be announced.
+Open **My library** and choose **Episodes & details** on a TV show or anime series. The detail view has an Info tab with region-specific streaming availability and an Episodes tab for progress. Choose a season, mark an aired episode watched, and adjust its watch date. Future-dated episodes show their release date and cannot be marked watched early. Movies have a Details & where to watch view. Streaming data is supplied by JustWatch through TMDB, and MST links to TMDB's availability page rather than guessing direct service links.

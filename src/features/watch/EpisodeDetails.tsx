@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../../lib/supabase';
+import { WhereToWatch } from './WhereToWatch';
 
 type SeasonSummary = { id: number; name: string; season_number: number; episode_count: number; air_date?: string | null };
 type Episode = {
@@ -190,6 +191,7 @@ export function EpisodeDetails({ title, catalogItemId, tmdbId, onClose }: Props)
             <h3>About this show</h3><p>{details?.overview || 'No synopsis is available yet.'}</p>
             <div className="episode-info-facts"><span><strong>{details?.number_of_seasons ?? details?.seasons?.length ?? '—'}</strong> seasons</span><span><strong>{details?.number_of_episodes ?? '—'}</strong> episodes</span><span><strong>{details?.vote_average ? details.vote_average.toFixed(1) : '—'}</strong> TMDB rating</span></div>
             {!!details?.genres?.length && <div className="episode-genres">{details.genres.map((genre) => <span key={genre.id}>{genre.name}</span>)}</div>}
+            <WhereToWatch tmdbId={tmdbId} mediaType="tv" />
           </div> : <>
           <div className="episode-season-tools">
             <div className="season-picker" role="tablist" aria-label="Choose season">{(details?.seasons ?? []).map((season) => <button type="button" role="tab" aria-selected={seasonNumber === season.season_number} className={seasonNumber === season.season_number ? 'is-active' : ''} key={season.id} onClick={() => setSeasonNumber(season.season_number)}>{season.name || `Season ${season.season_number}`}</button>)}</div>

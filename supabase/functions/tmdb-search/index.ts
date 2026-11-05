@@ -21,11 +21,25 @@ Deno.serve(async (request: Request) => {
       category?: unknown;
       tmdbId?: unknown;
       seasonNumber?: unknown;
+      mediaType?: unknown;
+      region?: unknown;
     };
-    if (body.action === 'tv-details' || body.action === 'tv-season') {
+    if (body.action === 'tv-details' || body.action === 'tv-season' || body.action === 'movie-details' || body.action === 'watch-providers') {
       const tmdbId = Number(body.tmdbId);
       if (!Number.isSafeInteger(tmdbId) || tmdbId < 1) return json({ error: 'That show could not be found.' }, 400);
-      let endpoint = `/tv/${tmdbId}`;
+      const mediaType = body.action === 'movie-details' ? 'movie' : body.mediaType === 'movie' ? 'movie' : 'tv';
+      let endpoint = `/${mediaType}/${tmdbId}`;
+      if (body.action === 'watch-providers') {
+        const region = typeof body.region === 'string' ? body.region.toUpperCase() : 'CA';
+        if (!/^[A-Z]{2}$/.test(region)) return json({ error: 'Choose a valid country.' }, 400);
+        endpoint += '/watch/providers';
+        const response = await fetch(`https://api.themoviedb.org/3${endpoint}`, {
+          headers: { accept: 'application/json', Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error(`TMDB provider request failed (${response.status}).`);
+        const data = await response.json() as { results?: Record<string, unknown> };
+        return json({ region, availability: data.results?.[region] ?? null });
+      }
       if (body.action === 'tv-season') {
         const seasonNumber = Number(body.seasonNumber);
         if (!Number.isSafeInteger(seasonNumber) || seasonNumber < 0 || seasonNumber > 100) {
