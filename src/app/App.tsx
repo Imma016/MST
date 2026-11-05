@@ -10,7 +10,7 @@ type InstallPromptEvent = Event & { prompt: () => Promise<void> };
 
 const themes: Array<{ id: ThemeId; label: string }> = [
   { id: 'midnight', label: 'Midnight' },
-  { id: 'gilded', label: 'Gilded' },
+  { id: 'gilded', label: 'Ember Gold' },
   { id: 'sky', label: 'Sky' },
   { id: 'terracotta', label: 'Terracotta' },
 ];
@@ -33,21 +33,6 @@ function Icon({ name }: { name: string }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true" {...common}><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>;
 }
 
-function getLegacyCounts() {
-  try {
-    const raw = localStorage.getItem('tracker_v1');
-    if (!raw) return null;
-    const value = JSON.parse(raw) as { series?: unknown[]; movies?: unknown[]; books?: unknown[] };
-    return {
-      series: value.series?.length ?? 0,
-      movies: value.movies?.length ?? 0,
-      books: value.books?.length ?? 0,
-    };
-  } catch {
-    return null;
-  }
-}
-
 function getInitialTheme(): ThemeId {
   const saved = localStorage.getItem('mst_theme');
   if (themes.some((theme) => theme.id === saved)) return saved as ThemeId;
@@ -65,7 +50,6 @@ export function App() {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(isRunningAsInstalledApp);
   const [theme, setTheme] = useState<ThemeId>(getInitialTheme);
-  const [legacyCounts] = useState(getLegacyCounts);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -118,7 +102,7 @@ export function App() {
       </header>
 
       <main className="main-content" key={activeTab}>
-        {activeTab === 'home' ? <HomePage counts={legacyCounts} /> : activeTab === 'watch' ? <WatchLibrary /> : (
+        {activeTab === 'home' ? <HomePage onBrowseWatch={() => setActiveTab('watch')} onBrowseBooks={() => setActiveTab('books')} onOpenProfile={() => setActiveTab('profile')} /> : activeTab === 'watch' ? <WatchLibrary /> : (
           activeTab === 'books' ? <Bookshelf /> : activeTab === 'profile' ? (
             <>
               <AccountPanel />
