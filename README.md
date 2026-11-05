@@ -1,23 +1,40 @@
 # MST
 
-MST is a small installable tracker for TV series, movies, and books. It is a static web app with no server or paid service required. Your list is saved in the browser on your device, and the app shell works offline after it has loaded once.
+MST is a personal tracker for the shows, movies, and books people care about. The project is being rebuilt in small steps as a React + TypeScript progressive web app. It will keep the MST name and install from the browser on iPhone, Android, and desktop.
+
+## Current build step
+
+This branch introduces the React app shell and mobile navigation. The previous tracker is preserved at `public/classic.html` and can still be opened at `/MST/classic.html` after deployment. Its data remains in browser storage under `tracker_v1`; keep that storage intact until the account migration step is complete.
 
 ## Run locally
 
-Open `index.html` in a browser. Browser install and offline features require serving the files over HTTPS (GitHub Pages provides this) or from localhost.
+Requirements: Node.js 22 or newer and npm.
 
-## Install on a phone
+```sh
+npm install
+npm run dev
+```
 
-- **iPhone:** open the deployed site in Safari, tap Share, then **Add to Home Screen**.
-- **Android:** open the deployed site in Chrome and tap **Install MST** (or use the browser menu).
+For a production preview:
 
-## Free GitHub Pages deployment
+```sh
+npm run build
+npm run preview
+```
 
-Push the `main` branch to GitHub and enable Pages with **GitHub Actions** as the build and deployment source. The workflow in `.github/workflows/pages.yml` publishes the static files automatically on each push.
+The GitHub Pages workflow builds the app and publishes the `dist` directory. Local development uses `/`; the Pages build uses `/MST/`.
 
-## Ideas for a next update
+## Planned stack
 
-- Add JSON export/import so your list is easy to back up or move to another phone.
-- Add optional account based sync across devices; this needs a backend and may have free-tier limits.
-- Add ratings, notes, genres, and filters for a richer personal library.
-- Add release reminders for ongoing series.
+- React and TypeScript for reusable, typed UI.
+- Supabase Auth and PostgreSQL with Row Level Security for accounts and private data.
+- Supabase Edge Functions to protect API credentials and cache metadata lookups.
+- TMDB for show and movie metadata; Open Library and Google Books for book discovery.
+- Browser storage and a service worker for offline access and pending changes.
+- GitHub Pages and Supabase free tiers, with no paid services in the plan.
+
+Public profiles, lists, and social content will be opt-in. The owner overview will show account counts and aggregate activity only; it will not expose users' private libraries.
+
+## Current app
+
+Open `public/classic.html` for the working legacy tracker. It stores data in the current browser. The React shell reads the existing `tracker_v1` record to show a small library summary, but account sign-in and cloud migration have not been added yet.
