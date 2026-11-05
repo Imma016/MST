@@ -15,6 +15,8 @@ npm install
 npm run dev
 ```
 
+If you already installed the foundation dependencies before the account step, run `npm install @supabase/supabase-js` once to add Supabase Auth.
+
 For a production preview:
 
 ```sh

@@ -16,6 +16,8 @@ This creates private-by-default profiles, prevents users from reading or changin
 
 In the project's **Connect** dialog, copy the Project URL and publishable key into a local `.env.local` file using `.env.example` as a guide. Do not put a Supabase secret or service-role key in the app or share one in chat. Publishable keys are intended for browser apps when RLS is enabled.
 
+The Profile screen supports email/password sign-up, sign-in, and password reset. For Google sign-in, add the OAuth client ID and secret in Supabase **Authentication → Providers → Google**, then set `VITE_ENABLE_GOOGLE_AUTH=true` in `.env.local`. Do not put the Google client secret in `.env.local`; Supabase stores it in the provider settings. Apple sign-in remains out of this step while we keep the setup free.
+
 Set the Supabase Auth **Site URL** to `https://imma016.github.io/MST/` and add the local development URL `http://localhost:5173/**` and the deployed app URL to the allowed redirect URLs.
 
 ## Make your account the owner

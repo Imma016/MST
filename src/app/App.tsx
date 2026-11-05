@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { HomePage } from '../features/home/HomePage';
+import { AccountPanel } from '../features/auth/AccountPanel';
 
 type TabId = 'home' | 'watch' | 'books' | 'discover' | 'profile';
 type ThemeId = 'midnight' | 'gilded' | 'sky' | 'terracotta';
@@ -115,6 +116,17 @@ export function App() {
 
       <main className="main-content" key={activeTab}>
         {activeTab === 'home' ? <HomePage counts={legacyCounts} /> : (
+          activeTab === 'profile' ? (
+            <>
+              <AccountPanel />
+              {!isInstalled && (
+                <div className="install-help">
+                  <h2>Add MST to your Home Screen</h2>
+                  <p>On iPhone, open MST in Safari, tap Share, then choose “Add to Home Screen.” On Android, open the browser menu and choose “Install app” or “Add to Home Screen.”</p>
+                </div>
+              )}
+            </>
+          ) :
           <section className="page-intro" aria-labelledby="page-title">
             <p className="eyebrow">MST · YOUR PERSONAL LIBRARY</p>
             <h1 id="page-title">{activeLabel}</h1>
@@ -122,7 +134,6 @@ export function App() {
               {activeTab === 'watch' && 'Keep your shows and movies together, and pick up right where you left off.'}
               {activeTab === 'books' && 'Build your shelves, follow your reading progress, and remember the books you love.'}
               {activeTab === 'discover' && 'Find something good to watch or read next.'}
-              {activeTab === 'profile' && 'Your account, privacy, goals, and app settings will live here.'}
             </p>
             <div className="coming-card">
               <span className="coming-icon"><Icon name={tabs.find((tab) => tab.id === activeTab)?.icon ?? 'sparkle'} /></span>
@@ -132,12 +143,6 @@ export function App() {
                 <a className="text-link" href={`${import.meta.env.BASE_URL}classic.html`}>Open the current tracker <span aria-hidden="true">↗</span></a>
               </div>
             </div>
-            {activeTab === 'profile' && !isInstalled && (
-              <div className="install-help">
-                <h2>Add MST to your Home Screen</h2>
-                <p>On iPhone, open MST in Safari, tap Share, then choose “Add to Home Screen.” On Android, open the browser menu and choose “Install app” or “Add to Home Screen.”</p>
-              </div>
-            )}
           </section>
         )}
       </main>
