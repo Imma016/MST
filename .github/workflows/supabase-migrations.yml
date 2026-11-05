@@ -37,7 +37,7 @@ jobs:
 
       - name: Register migrations previously run in SQL Editor
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.register_existing_migrations }}
-        run: supabase migration repair 202611050001 202611050002 202611050003 --status applied --remote
+        run: supabase migration repair 202611050001 202611050002 202611050003 --status applied --remote --yes
 
       - name: Apply pending migrations
         run: supabase db push --yes --remote
