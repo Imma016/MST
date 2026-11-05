@@ -16,6 +16,13 @@ type Episode = {
 type TvDetails = {
   name?: string;
   overview?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  first_air_date?: string | null;
+  vote_average?: number;
+  genres?: Array<{ id: number; name: string }>;
+  number_of_seasons?: number;
+  number_of_episodes?: number;
   seasons?: SeasonSummary[];
   next_episode_to_air?: Episode | null;
 };
@@ -45,6 +52,7 @@ export function EpisodeDetails({ title, catalogItemId, tmdbId, onClose }: Props)
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [progress, setProgress] = useState<Record<number, string>>({});
   const [seasonNumber, setSeasonNumber] = useState<number | null>(null);
+  const [detailTab, setDetailTab] = useState<'episodes' | 'info'>('episodes');
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [loadingSeason, setLoadingSeason] = useState(false);
   const [busyEpisode, setBusyEpisode] = useState<number | null>(null);
@@ -166,15 +174,25 @@ export function EpisodeDetails({ title, catalogItemId, tmdbId, onClose }: Props)
         </header>
 
         {loadingDetails ? <div className="episode-loading"><span className="loading-dot" /> Loading show details…</div> : <>
-          {details?.overview && <p className="episode-show-overview">{details.overview}</p>}
+          {details && <div className="episode-show-hero" style={details.backdrop_path ? { backgroundImage: `linear-gradient(90deg, var(--page) 0%, color-mix(in srgb, var(--page) 82%, transparent) 58%, color-mix(in srgb, var(--page) 45%, transparent)), url(${imageUrl(details.backdrop_path)})` } : undefined}>
+            {details.poster_path && <img src={imageUrl(details.poster_path)} alt={`${details.name || title} poster`} />}
+            <div><p className="eyebrow">TV SERIES · {details.first_air_date?.slice(0, 4) || 'YEAR UNKNOWN'}{details.vote_average ? ` · ★ ${details.vote_average.toFixed(1)}` : ''}</p><p className="episode-show-overview">{details.overview || 'No synopsis is available yet.'}</p></div>
+          </div>}
           {nextEpisode && <div className="next-airing-card">
             <span className="airing-icon" aria-hidden="true">◷</span>
             <div><span className="poster-type">UPCOMING</span><strong>Next: S{nextEpisode.season_number} · E{nextEpisode.episode_number} — {nextEpisode.name}</strong><p>{formatDate(nextEpisode.air_date)}</p></div>
           </div>}
+          <div className="episode-detail-tabs" role="tablist" aria-label="Show details">
+            <button type="button" role="tab" aria-selected={detailTab === 'episodes'} className={detailTab === 'episodes' ? 'is-active' : ''} onClick={() => setDetailTab('episodes')}>Episodes</button>
+            <button type="button" role="tab" aria-selected={detailTab === 'info'} className={detailTab === 'info' ? 'is-active' : ''} onClick={() => setDetailTab('info')}>Info</button>
+          </div>
+          {detailTab === 'info' ? <div className="episode-info-panel">
+            <h3>About this show</h3><p>{details?.overview || 'No synopsis is available yet.'}</p>
+            <div className="episode-info-facts"><span><strong>{details?.number_of_seasons ?? details?.seasons?.length ?? '—'}</strong> seasons</span><span><strong>{details?.number_of_episodes ?? '—'}</strong> episodes</span><span><strong>{details?.vote_average ? details.vote_average.toFixed(1) : '—'}</strong> TMDB rating</span></div>
+            {!!details?.genres?.length && <div className="episode-genres">{details.genres.map((genre) => <span key={genre.id}>{genre.name}</span>)}</div>}
+          </div> : <>
           <div className="episode-season-tools">
-            <label>Season <select value={seasonNumber ?? ''} onChange={(event) => setSeasonNumber(Number(event.target.value))} disabled={!details?.seasons?.length}>
-              {(details?.seasons ?? []).map((season) => <option key={season.id} value={season.season_number}>{season.name || `Season ${season.season_number}`}</option>)}
-            </select></label>
+            <div className="season-picker" role="tablist" aria-label="Choose season">{(details?.seasons ?? []).map((season) => <button type="button" role="tab" aria-selected={seasonNumber === season.season_number} className={seasonNumber === season.season_number ? 'is-active' : ''} key={season.id} onClick={() => setSeasonNumber(season.season_number)}>{season.name || `Season ${season.season_number}`}</button>)}</div>
             <span className="season-progress">{watchedCount} / {episodes.length} watched <span aria-hidden="true">·</span> {progressPercent}%</span>
           </div>
           {episodes.length > 0 && <div className="season-progress-track" role="progressbar" aria-label="Season progress" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progressPercent}%` }} /></div>}
@@ -191,6 +209,7 @@ export function EpisodeDetails({ title, catalogItemId, tmdbId, onClose }: Props)
               <button type="button" className={`episode-watch-toggle${watchedAt ? ' is-watched' : ''}`} disabled={isUpcoming || busyEpisode === episode.id} onClick={() => void toggleWatched(episode)}>{busyEpisode === episode.id ? 'Saving…' : watchedAt ? '✓ Watched' : isUpcoming ? 'Not released' : 'Mark watched'}</button>
             </article>;
           })}</div>}
+          </>}
         </>}
       </section>
     </div>

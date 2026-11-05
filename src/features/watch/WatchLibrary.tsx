@@ -59,9 +59,11 @@ export function WatchLibrary() {
   const [searching, setSearching] = useState(false);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [episodeCounts, setEpisodeCounts] = useState<Record<string, number>>({});
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [view, setView] = useState<'search' | 'library'>('search');
+  const [view, setView] = useState<'search' | 'library'>('library');
+  const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
   const [selectedShow, setSelectedShow] = useState<Saved | null>(null);
 
   useEffect(() => {
@@ -122,7 +124,27 @@ export function WatchLibrary() {
     return () => { cancelled = true; };
   }, [session, category]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!session || !supabase) { setEpisodeCounts({}); return; }
+    const catalogIds = saved.filter((entry) => entry.catalog_item?.media_type === 'tv').map((entry) => entry.catalog_item_id);
+    if (!catalogIds.length) { setEpisodeCounts({}); return; }
+    void supabase.from('user_episode_progress').select('catalog_item_id')
+      .eq('user_id', session.user.id).in('catalog_item_id', catalogIds)
+      .then(({ data, error: progressError }) => {
+        if (cancelled) return;
+        if (progressError) return;
+        const next: Record<string, number> = {};
+        (data ?? []).forEach((row) => { next[row.catalog_item_id] = (next[row.catalog_item_id] ?? 0) + 1; });
+        setEpisodeCounts(next);
+      });
+    return () => { cancelled = true; };
+  }, [session, saved]);
+
   const savedIds = useMemo(() => new Set(saved.map((entry) => entry.catalog_item && `${entry.catalog_item.media_type}:${entry.catalog_item.provider_id}`)), [saved]);
+  const filteredSaved = useMemo(() => statusFilter === 'all' ? saved : saved.filter((entry) => entry.status === statusFilter), [saved, statusFilter]);
+  const watchingCount = saved.filter((entry) => entry.status === 'watching').length;
+  const completedCount = saved.filter((entry) => entry.status === 'completed').length;
 
   async function addTitle(item: Result) {
     if (!supabase || !session) return;
@@ -198,7 +220,7 @@ export function WatchLibrary() {
         <div>
           <p className="eyebrow">MST · YOUR PERSONAL LIBRARY</p>
           <h1 id="watch-title">Watch</h1>
-          <p className="page-description">Find a title, add it with its poster, and keep your watchlist close.</p>
+          <p className="page-description">Your watchlist, viewing progress, and next episodes in one place.</p>
         </div>
       </div>
 
@@ -237,9 +259,18 @@ export function WatchLibrary() {
       </>}
 
       {session && view === 'library' && <>
-        {loadingLibrary ? <div className="poster-grid" aria-label="Loading library">{Array.from({ length: 3 }, (_, index) => <div className="poster-skeleton" key={index}><span /><i /><b /></div>)}</div> : saved.length === 0 ? <div className="library-empty"><span className="empty-symbol">✧</span><h2>Your {category === 'anime' ? 'anime' : category === 'tv' ? 'TV' : 'movie'} list is ready</h2><p>Search for a title and add it here. Posters and your progress stay saved to your account.</p><button className="watch-primary" type="button" onClick={() => setView('search')}>Find something to watch</button></div> : <div className="saved-list">{saved.map((entry) => <article className="saved-card" key={entry.id}>
+        <div className="library-overview" aria-label="Watch library summary">
+          <span><strong>{saved.length}</strong> saved</span><i aria-hidden="true" />
+          <span><strong>{watchingCount}</strong> watching</span><i aria-hidden="true" />
+          <span><strong>{completedCount}</strong> completed</span>
+        </div>
+        {saved.length > 0 && <div className="status-filters" role="tablist" aria-label="Filter library by status">
+          <button type="button" role="tab" aria-selected={statusFilter === 'all'} className={statusFilter === 'all' ? 'is-active' : ''} onClick={() => setStatusFilter('all')}>All <span>{saved.length}</span></button>
+          {statuses.map((status) => <button type="button" role="tab" aria-selected={statusFilter === status.id} className={statusFilter === status.id ? 'is-active' : ''} key={status.id} onClick={() => setStatusFilter(status.id)}>{status.label} <span>{saved.filter((entry) => entry.status === status.id).length}</span></button>)}
+        </div>}
+        {loadingLibrary ? <div className="poster-grid" aria-label="Loading library">{Array.from({ length: 3 }, (_, index) => <div className="poster-skeleton" key={index}><span /><i /><b /></div>)}</div> : saved.length === 0 ? <div className="library-empty"><span className="empty-symbol">✧</span><h2>Your {category === 'anime' ? 'anime' : category === 'tv' ? 'TV' : 'movie'} list is ready</h2><p>Search for a title and add it here. Posters and your progress stay saved to your account.</p><button className="watch-primary" type="button" onClick={() => setView('search')}>Find something to watch</button></div> : filteredSaved.length === 0 ? <div className="library-empty compact-empty"><h2>No titles in this status yet</h2><p>Choose another filter or add something new.</p><button className="account-text-button" type="button" onClick={() => setStatusFilter('all')}>Show all titles</button></div> : <div className="saved-list">{filteredSaved.map((entry) => <article className="saved-card" key={entry.id}>
           <Poster path={entry.catalog_item?.poster_path} title={entry.catalog_item?.title ?? 'Saved title'} />
-          <div className="saved-card-info"><span className="poster-type">{entry.category === 'anime' ? 'ANIME' : entry.category === 'tv' ? 'TV SERIES' : 'MOVIE'}</span><h2>{entry.catalog_item?.title ?? 'Saved title'}</h2><p>{(entry.catalog_item?.release_date ?? '').slice(0, 4) || 'Release date unknown'}{entry.catalog_item?.original_language ? ` · ${entry.catalog_item.original_language.toUpperCase()}` : ''}</p><p className="saved-overview">{entry.catalog_item?.overview || 'No description available.'}</p>
+          <div className="saved-card-info"><div className="saved-card-kicker"><span className="poster-type">{entry.category === 'anime' ? 'ANIME' : entry.category === 'tv' ? 'TV SERIES' : 'MOVIE'}</span><span className={`saved-status saved-status-${entry.status}`}>{statuses.find((status) => status.id === entry.status)?.label}</span></div><h2>{entry.catalog_item?.title ?? 'Saved title'}</h2><p>{(entry.catalog_item?.release_date ?? '').slice(0, 4) || 'Release date unknown'}{entry.catalog_item?.original_language ? ` · ${entry.catalog_item.original_language.toUpperCase()}` : ''}</p>{entry.catalog_item?.media_type === 'tv' && <span className="saved-progress-pill">{episodeCounts[entry.catalog_item_id] ?? 0} episodes logged</span>}<p className="saved-overview">{entry.catalog_item?.overview || 'No description available.'}</p>
           <div className="saved-actions"><label><span className="sr-only">Status for {entry.catalog_item?.title}</span><select value={entry.status} onChange={(event) => void changeStatus(entry.id, event.target.value as Status)}>{statuses.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select></label>{entry.catalog_item?.media_type === 'tv' && <button type="button" className="episodes-link" onClick={() => setSelectedShow(entry)}>Episodes &amp; progress</button>}<button type="button" className="remove-title" onClick={() => void removeTitle(entry.id)}>Remove</button></div></div>
         </article>)}</div>}
       </>}
