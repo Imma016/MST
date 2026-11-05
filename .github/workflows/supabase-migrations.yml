@@ -41,3 +41,4 @@ jobs:
 
       - name: Apply pending migrations
         run: supabase db push --yes --remote
+# Refresh workflow registration
