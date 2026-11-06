@@ -652,6 +652,25 @@ h1, h2 { font-family: Manrope, sans-serif; }
 .book-authors { display: -webkit-box; overflow: hidden; margin: 0 0 5px; color: var(--muted); font-size: .7rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .book-meta { overflow: hidden; margin: 0; color: var(--muted); font-size: .67rem; text-overflow: ellipsis; white-space: nowrap; }
 .book-result-body .add-title { margin-top: 12px; min-height: 37px; font-size: .7rem; }
+.book-detail-button { width: 100%; min-height: 35px; margin-top: 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-soft); color: var(--text); cursor: pointer; font-size: .7rem; font-weight: 700; }
+.book-detail-button:hover { border-color: var(--accent); color: var(--accent); }
+.book-detail-dialog { width: min(100%, 760px); }
+.book-detail-main { display: grid; grid-template-columns: minmax(140px, 210px) minmax(0, 1fr); gap: clamp(18px, 4vw, 30px); margin-top: 23px; }
+.book-detail-main > .book-cover { width: 100%; border: 1px solid var(--line); border-radius: 12px; }
+.book-detail-copy { min-width: 0; }
+.book-detail-copy > .book-authors { margin-top: 0; font-size: .82rem; }
+.book-detail-copy > .book-meta { white-space: normal; }
+.book-detail-copy h3, .book-detail-shelf-actions h3 { margin: 19px 0 8px; font-size: .88rem; }
+.book-detail-description { margin: 0; color: var(--muted); font-size: .78rem; line-height: 1.65; white-space: pre-line; }
+.book-identifiers { display: flex; flex-wrap: wrap; gap: 7px 14px; margin-top: 12px; color: var(--muted); font-size: .67rem; }
+.book-identifiers strong { color: var(--text); font-weight: 650; }
+.book-subject-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.book-subject-list span { padding: 5px 9px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel); color: var(--muted); font-size: .65rem; }
+.book-detail-shelf-actions { margin-top: 20px; padding-top: 4px; border-top: 1px solid var(--line); }
+.book-detail-shelf-actions h3 { margin-top: 14px; }
+.book-detail-shelf-actions > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.book-detail-shelf-actions .episodes-link { min-height: 39px; }
+.book-detail-credit { margin: 17px 0 0; color: var(--muted); font-size: .65rem; }
 .book-skeleton { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
 .book-skeleton span { display: block; aspect-ratio: 2 / 3; background: linear-gradient(100deg, var(--panel-soft) 30%, color-mix(in srgb, var(--panel-soft) 65%, var(--line)) 50%, var(--panel-soft) 70%); background-size: 220% 100%; animation: shimmer 1.3s infinite linear; }
 .book-skeleton i, .book-skeleton b { display: block; height: 9px; margin: 13px 11px 0; border-radius: 6px; background: var(--panel-soft); }
@@ -674,6 +693,10 @@ h1, h2 { font-family: Manrope, sans-serif; }
   .books-heading { align-items: center; margin-bottom: 21px; }
   .book-results-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
   .book-result-body { padding: 10px; }
+  .book-detail-main { grid-template-columns: 92px minmax(0, 1fr); gap: 13px; margin-top: 18px; }
+  .book-detail-copy h3 { margin-top: 14px; }
+  .book-detail-shelf-actions > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .book-detail-shelf-actions > div button { min-height: 42px; padding-inline: 8px; }
   .saved-book-card { grid-template-columns: 86px minmax(0, 1fr); gap: 13px; padding: 9px; }
   .saved-book-card > .book-cover { width: 86px; }
   .saved-book-info .saved-actions { align-items: flex-start; flex-direction: column; gap: 8px; }

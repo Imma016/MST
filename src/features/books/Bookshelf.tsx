@@ -147,6 +147,7 @@ export function Bookshelf() {
   const [draftPages, setDraftPages] = useState<Record<string, string>>({});
   const [view, setView] = useState<'search' | 'library'>('search');
   const [filter, setFilter] = useState<Shelf | 'all'>('all');
+  const [selectedBook, setSelectedBook] = useState<BookResult | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -208,7 +209,7 @@ export function Bookshelf() {
   }) : [])), [saved]);
   const visibleSaved = useMemo(() => filter === 'all' ? saved : saved.filter((book) => book.shelf === filter), [filter, saved]);
 
-  async function addBook(book: BookResult) {
+  async function addBook(book: BookResult, shelf: Shelf = 'want_to_read') {
     if (!supabase || !session) return;
     const key = `${book.provider}:${book.providerId}`;
     setAddingId(key); setError(''); setNotice('');
@@ -219,15 +220,21 @@ export function Bookshelf() {
     }, { onConflict: 'provider,provider_id' }).select('id').single();
     if (catalogError || !catalog) { setError('Could not save this book. Please try again.'); setAddingId(''); return; }
     const { data: libraryEntry, error: addError } = await supabase.from('user_books').insert({
-      user_id: session.user.id, book_id: catalog.id, shelf: 'want_to_read',
+      user_id: session.user.id, book_id: catalog.id, shelf,
+      current_page: shelf === 'finished' ? book.pageCount ?? 0 : 0,
+      started_on: shelf === 'currently_reading' ? today() : null,
+      finished_on: shelf === 'finished' ? today() : null,
     }).select('id').single();
     setAddingId('');
     if (addError?.code === '23505') setNotice('This book is already on your shelves.');
     else if (addError || !libraryEntry) setError('The book was found, but could not be added to your shelves.');
     else {
-      setNotice(`${book.title} added to Want to read.`);
+      setNotice(`${book.title} added to ${shelves.find((item) => item.id === shelf)?.label ?? 'your shelves'}.`);
       setSaved((current) => [{
-        id: libraryEntry.id, book_id: catalog.id, shelf: 'want_to_read', current_page: 0, started_on: null, finished_on: null,
+        id: libraryEntry.id, book_id: catalog.id, shelf,
+        current_page: shelf === 'finished' ? book.pageCount ?? 0 : 0,
+        started_on: shelf === 'currently_reading' ? today() : null,
+        finished_on: shelf === 'finished' ? today() : null,
         book: { provider: book.provider, provider_id: book.providerId, title: book.title, authors: book.authors,
           description: book.description, cover_url: book.coverUrl, page_count: book.pageCount,
           isbn_10: book.isbn10, isbn_13: book.isbn13, published_year: book.publishedYear },
@@ -310,7 +317,7 @@ export function Bookshelf() {
         {!searching && results.length > 0 && <div className="book-results-grid">{results.map((book) => {
           const key = `${book.provider}:${book.providerId}`;
           const alreadySaved = bookIdentityKeys(book).some((identity) => savedKeys.has(identity));
-          return <article className="book-result-card" key={key}><BookCover path={book.coverUrl} title={book.title} /><div className="book-result-body"><span className="poster-type">{book.sources.map((source) => source === 'googlebooks' ? 'GOOGLE BOOKS' : 'OPEN LIBRARY').join(' + ')}</span><h2 title={book.title}>{book.title}</h2><p className="book-authors">{book.authors.join(', ') || 'Author unknown'}</p><p className="book-meta">{book.publishedYear || 'Publication year unknown'}{book.pageCount ? ` · ${book.pageCount} pages` : ''}</p><button type="button" className={`watch-primary add-title${alreadySaved ? ' is-added' : ''}`} disabled={alreadySaved || addingId === key} onClick={() => void addBook(book)}>{addingId === key ? 'Adding…' : alreadySaved ? '✓ On your shelves' : '+ Add to Want to read'}</button></div></article>;
+          return <article className="book-result-card" key={key}><BookCover path={book.coverUrl} title={book.title} /><div className="book-result-body"><span className="poster-type">{book.sources.map((source) => source === 'googlebooks' ? 'GOOGLE BOOKS' : 'OPEN LIBRARY').join(' + ')}</span><h2 title={book.title}>{book.title}</h2><p className="book-authors">{book.authors.join(', ') || 'Author unknown'}</p><p className="book-meta">{book.publishedYear || 'Publication year unknown'}{book.pageCount ? ` · ${book.pageCount} pages` : ''}</p><button type="button" className="book-detail-button" onClick={() => setSelectedBook(book)}>Book details</button><button type="button" className={`watch-primary add-title${alreadySaved ? ' is-added' : ''}`} disabled={alreadySaved || addingId === key} onClick={() => void addBook(book)}>{addingId === key ? 'Adding…' : alreadySaved ? '✓ On your shelves' : '+ Add to Want to read'}</button></div></article>;
         })}</div>}
       </>}
 
@@ -327,8 +334,36 @@ export function Bookshelf() {
           </div></article>;
         })}</div>}
       </>}
+      {selectedBook && <BookDetailsDialog book={selectedBook} alreadySaved={bookIdentityKeys(selectedBook).some((key) => savedKeys.has(key))} adding={addingId === `${selectedBook.provider}:${selectedBook.providerId}`} onClose={() => setSelectedBook(null)} onAdd={(shelf) => void addBook(selectedBook, shelf)} onOpenShelves={() => { setSelectedBook(null); setView('library'); }} />}
     </section>
   );
+}
+
+function BookDetailsDialog({ book, alreadySaved, adding, onClose, onAdd, onOpenShelves }: {
+  book: BookResult;
+  alreadySaved: boolean;
+  adding: boolean;
+  onClose: () => void;
+  onAdd: (shelf: Shelf) => void;
+  onOpenShelves: () => void;
+}) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+  return <div className="episode-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="episode-dialog book-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="book-detail-title">
+      <header className="episode-dialog-header"><div><p className="eyebrow">BOOK DETAILS</p><h2 id="book-detail-title">{book.title}</h2></div><button type="button" className="episode-close" onClick={onClose} aria-label="Close book details">×</button></header>
+      <div className="book-detail-main"><BookCover path={book.coverUrl} title={book.title} /><div className="book-detail-copy"><p className="book-authors">{book.authors.join(', ') || 'Author unknown'}</p><p className="book-meta">{book.publishedYear || 'Publication year unknown'}{book.pageCount ? ` · ${book.pageCount} pages` : ''}</p>
+        <div className="book-identifiers">{book.isbn13 && <span>ISBN-13 <strong>{book.isbn13}</strong></span>}{book.isbn10 && <span>ISBN-10 <strong>{book.isbn10}</strong></span>}</div>
+        <h3>About this book</h3><p className="book-detail-description">{book.description || 'No description is available from these catalogs yet.'}</p>
+        {!!book.subjects.length && <><h3>Subjects</h3><div className="book-subject-list">{book.subjects.map((subject) => <span key={subject}>{subject}</span>)}</div></>}
+      </div></div>
+      <div className="book-detail-shelf-actions"><h3>{alreadySaved ? 'Already on your shelves' : 'Add to shelf'}</h3>{alreadySaved ? <button type="button" className="watch-primary" onClick={onOpenShelves}>View my shelves</button> : <div>{shelves.map((shelf) => <button type="button" key={shelf.id} className={shelf.id === 'want_to_read' ? 'watch-primary' : 'episodes-link'} disabled={adding} onClick={() => onAdd(shelf.id)}>{adding ? 'Adding…' : shelf.label}</button>)}</div>}</div>
+      <p className="book-detail-credit">Book metadata from {book.sources.map((source) => source === 'googlebooks' ? 'Google Books' : 'Open Library').join(' and ')}.</p>
+    </section>
+  </div>;
 }
 
 function BookCover({ path, title }: { path: string | null; title: string }) {
